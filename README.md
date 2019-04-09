@@ -1,2 +1,2 @@
 ### Compiler
-#### use command ./Compiler <fileName> ... <fileName> to compile 
+#### [use command ./Compiler <fileName> ... <fileName> to compile ]
