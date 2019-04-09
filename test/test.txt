@@ -1,0 +1,20 @@
+string str;
+double @#;
+int x,fact;
+str:='sample;
+read x;
+if x>0 and x<100 then {don't compute if x<=0}
+    fact:=1;
+    do
+        fact:=fact*x;
+        x:=x-1;
+    while x>0;
+    write fact;
+end
+if y>=0 and z<=7 or k!=85 then
+    do_this()
+read 'Hello world'
+{Please
+      do this
+
+}
