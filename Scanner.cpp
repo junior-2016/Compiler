@@ -11,7 +11,7 @@ namespace Compiler::Scanner {
         START,
         INCOMMENT, // {comment}
         INSTR,    // 'str'
-        INNUM,    // [0-9]*,后面可能考虑浮点常量.
+        INNUM,   // [0-9]*.[0-9]+ | [0-9]*
         INID,     // [a-z;A-z][0-9;A-Z;a-z]*
         INASSIGN, // :=
         INNE,     // !=
@@ -79,8 +79,8 @@ namespace Compiler::Scanner {
             saveTokenString = true;
             switch (state) {
                 case START:
-                    if (isdigit(c)) {
-                        state = INNUM; // 暂时不考虑浮点字符串
+                    if (isdigit(c) || c == '.') {
+                        state = INNUM;
                     } else if (isalpha(c)) {
                         state = INID;
                     } else if (c == ':') {
@@ -170,11 +170,15 @@ namespace Compiler::Scanner {
                     }
                     break;
                 case INNUM:
-                    if (!isdigit(c)) {
+                    if (!isdigit(c) && c != '.') {
                         undoGetNextChar();
                         saveTokenString = false;
                         state = DONE;
-                        currentToken = NUM;
+                        if (tokenString == "." ||
+                            // 使用 std::count(begin,end,find_)可以非常容易得到一个find_在容器出现的次数..
+                            std::count(tokenString.begin(), tokenString.end(), '.') > 1) {
+                            currentToken = ERROR;
+                        } else currentToken = NUM;
                     }
                     break;
                 case INID:
