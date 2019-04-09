@@ -72,7 +72,7 @@ namespace Compiler::Scanner {
                 } else {
                     std::string message = "LineNumber:" + std::to_string(lineNumber) + ",Pos:" +
                                           std::to_string(pos) + ",illegal char:" + char(c);
-                    ExceptionHandle::getHandle().add_exception(ILLEGAL_CHAR, message);
+                    ExceptionHandle::getHandle().add_exception(ExceptionType::ILLEGAL_CHAR, message);
                     continue; // 跳过非法字符
                 }
             }// 处理非法字符,直接跳过,在注释里或者字符串里的字符不管合不合法.
@@ -149,7 +149,7 @@ namespace Compiler::Scanner {
                         state = DONE;
                         currentToken = END_FILE;
                         std::string message = "Comment match error on : LineNumber " + std::to_string(lineNumber);
-                        ExceptionHandle::getHandle().add_exception(MATCH_ERROR, message);
+                        ExceptionHandle::getHandle().add_exception(ExceptionType::MATCH_ERROR, message);
                     }
                     break;
                 case INSTR:
@@ -164,7 +164,7 @@ namespace Compiler::Scanner {
                         if (c == EOF) currentToken = END_FILE;
                         else currentToken = ERROR;
                         std::string message = "String match error on : LineNumber " + std::to_string(lineNumber);
-                        ExceptionHandle::getHandle().add_exception(MATCH_ERROR, message);
+                        ExceptionHandle::getHandle().add_exception(ExceptionType::MATCH_ERROR, message);
                     } else {
                         saveTokenString = true;
                     }

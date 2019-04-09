@@ -8,16 +8,19 @@
 #include "Compiler.h"
 
 namespace Compiler::Exception {
-    typedef enum {
+    enum class ExceptionType {
         ID_REPEAT,
         // 标识符重复定义,这个要鉴定有一定难度,需要考虑上下文.
 
         ILLEGAL_CHAR,
         // 非法字符,比如 $ 就是不属于当前编程语言的合法字符,要处理这个需要预先有一个合法字符表(用hash-set实现)
 
-        MATCH_ERROR
+        MATCH_ERROR,
         // 匹配错误,比如字符串'...匹配错误,或者注释{...匹配错误
-    } ExceptionType;
+
+        SYNTAX_ERROR
+        // 语法分析错误
+    };
 
     struct ExceptionEntry {
         std::string message;

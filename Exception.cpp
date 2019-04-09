@@ -9,16 +9,22 @@ namespace Compiler::Exception {
         errors.push_back(ExceptionEntry{message, type});
     }
 
+    std::map<ExceptionType, std::string> getExceptionTypeStrings() {
+        static auto map = std::map<ExceptionType, std::string>
+                {{ExceptionType::ID_REPEAT,    "ID_REPEAT"},
+                 {ExceptionType::MATCH_ERROR,  "MATCH_ERROR"},
+                 {ExceptionType::ILLEGAL_CHAR, "ILLEGAL_CHAR"},
+                 {ExceptionType::SYNTAX_ERROR, "SYNTAX_ERROR"}};
+        return map;
+    }
+
     std::string printExceptionType(ExceptionType type) {
-        switch (type) {
-            case ID_REPEAT:
-                return "ID_REPEAT";
-            case MATCH_ERROR:
-                return "MATCH_ERROR";
-            case ILLEGAL_CHAR:
-                return "ILLEGAL_CHAR";
-            default:
-                return "Unknown_Exception";
+        auto map = getExceptionTypeStrings();
+        std::map<ExceptionType, std::string>::iterator pos;
+        if ((pos = map.find(type)) == map.end()) {
+            return "UNKNOWN_EXCEPTION";
+        } else {
+            return (*pos).second;
         }
     }
 
