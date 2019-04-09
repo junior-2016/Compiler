@@ -148,8 +148,7 @@ namespace Compiler::Scanner {
                         // (注释允许跨多行,因此可以一直判断到EOF)
                         state = DONE;
                         currentToken = END_FILE;
-                        std::string message = "Comment match error on : LineNumber " + std::to_string(lineNumber)
-                                              + " ,Pos " + std::to_string(pos);
+                        std::string message = "Comment match error on : LineNumber " + std::to_string(lineNumber);
                         ExceptionHandle::getHandle().add_exception(MATCH_ERROR, message);
                     }
                     break;
@@ -164,8 +163,7 @@ namespace Compiler::Scanner {
                         state = DONE;
                         if (c == EOF) currentToken = END_FILE;
                         else currentToken = ERROR;
-                        std::string message = "String match error on : LineNumber " + std::to_string(lineNumber)
-                                              + " ,Pos " + std::to_string(pos);
+                        std::string message = "String match error on : LineNumber " + std::to_string(lineNumber);
                         ExceptionHandle::getHandle().add_exception(MATCH_ERROR, message);
                     } else {
                         saveTokenString = true;

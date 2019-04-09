@@ -16,5 +16,3 @@ if y>=0 and z<=7 or k!=85 then
 read 'Hello world'
 {Please
       do this
-
-}
