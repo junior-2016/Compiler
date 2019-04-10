@@ -6,7 +6,8 @@ double dd = .;
 double ddd = .562.2556.222.3;
 double dddd = 1.252.222;
 int x,fact;
-str:='sample;
+str:='sample
+';
 read x;
 if x>0 and x<100 then {don't compute if x<=0}
     fact:=1;
@@ -21,3 +22,4 @@ if y>=0 and z<=7 or k!=85 then
 read 'Hello world'
 {Please
       do this
+}
