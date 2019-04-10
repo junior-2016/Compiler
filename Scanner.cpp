@@ -257,7 +257,7 @@ namespace Compiler::Scanner {
         } else { // 其他类型的Token,比如关键字,特殊符号,END_FILE,ERROR等等,都不需要一个TokenString.
             ptr = nullptr;
         }
-        return {currentToken, ptr};
+        return {lineNumber, currentToken, ptr};
     }
 
     void clearAll() {

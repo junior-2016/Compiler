@@ -16,7 +16,7 @@ namespace Compiler::Parser {
         using namespace Compiler::Exception;
         auto token = Scanner::getToken();
         auto t = stmt_sequence();
-        if (token.first != END_FILE) {
+        if (token.tokenType != END_FILE) {
             ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, "Syntax Error");
         }
         return t;

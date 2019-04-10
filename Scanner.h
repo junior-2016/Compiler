@@ -10,7 +10,11 @@
 
 namespace Compiler::Scanner {
 
-    typedef std::pair<TokenType, std::shared_ptr<std::string>> TokenRet;
+    struct TokenRet {
+        int lineNumber;
+        TokenType tokenType;
+        std::shared_ptr<std::string> tokenString;
+    };
 
     TokenRet getToken();
 

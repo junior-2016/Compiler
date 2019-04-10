@@ -21,7 +21,7 @@ namespace Compiler {
         readFromFile(n - 1, argv + 1);
         for (auto &pair:files) {
             file = pair.second;
-            while (getToken().first != END_FILE);
+            while (getToken().tokenType != END_FILE);
             if (ExceptionHandle::getHandle().hasException()) {
                 std::cerr << "Process File " << pair.first << " has exceptions:\n" <<
                           ExceptionHandle::getHandle();
