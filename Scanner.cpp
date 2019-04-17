@@ -55,6 +55,7 @@ namespace Compiler::Scanner {
         if (!EOF_flag) pos--;
     }
 
+    // TODO: 加入对多种进制的处理
     TokenRet getToken() {
         using namespace Compiler::Exception;
         std::string tokenString;
