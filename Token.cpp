@@ -2,6 +2,7 @@
 // Created by junior on 19-4-7.
 //
 #include "Token.h"
+#include "Util.h"
 
 namespace Compiler {
     // 下面两个表(关键字表和合法字符表),本来是可以直接写成静态成员的,
@@ -56,6 +57,7 @@ namespace Compiler {
     }
 
     void printToken(TokenType type, std::string &tokenString) {
+        std::string numType;
         switch (type) {
             case IF:
             case THEN:
@@ -129,7 +131,24 @@ namespace Compiler {
                 fprintf(OUTPUT_STREAM, "EOF\n");
                 break;
             case NUM:
-                fprintf(OUTPUT_STREAM, "NUMBER, val=%s\n", tokenString.c_str());
+                /*
+                 * 虽然我们不将十进制,八进制,十六进制和浮点数分开,但是打印Token的时候可以显式输出这些信息.
+                 */
+                switch (Compiler::getNumType(tokenString)) {
+                    case NUM_TYPE::DECIMAL:
+                        numType = "DECIMAL";
+                        break;
+                    case NUM_TYPE::OCT:
+                        numType = "OCT";
+                        break;
+                    case NUM_TYPE::HEX:
+                        numType = "HEX";
+                        break;
+                    case NUM_TYPE::FLOAT:
+                        numType = "FLOAT";
+                        break;
+                }
+                fprintf(OUTPUT_STREAM, "NUMBER, val=%s, type=%s\n", tokenString.c_str(), numType.c_str());
                 break;
             case ID:
                 fprintf(OUTPUT_STREAM, "ID, name=%s\n", tokenString.c_str());

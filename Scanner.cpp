@@ -11,12 +11,24 @@ namespace Compiler::Scanner {
         START,
         INCOMMENT, // {comment}
         INSTR,    // 'str'
-        INNUM,   // [0-9]*.[0-9]+ | [0-9]*
         INID,     // [a-z;A-z][0-9;A-Z;a-z]*
         INASSIGN, // :=
         INNE,     // !=
         INBE,     // >=
         INLE,     // <=
+        /*
+         * 下面的 DECIMAL,OCT,HEX,FLOAT 都会被解析为 NUM（数值常量型）Token.
+         * 而不会分成四种Token来处理,原因很简单,在没有语法语义分析之前尚不能确定它们所指变量的实际类型,
+         * 比如 int a = 1.23; 实际a的类型为int,只有后面语义分析的时候得到类型信息,
+         * 我们才能将此时的NUM=1.23取出,然后cast为int型,再赋值,最后是 a=1.
+         * 所以不能轻易认为词法得到的Float以后赋值也是浮点数.
+         * 因此,数值常量都当做NUM型,并且都用字符串储存数值才是最佳选择,而且用字符串储存不会丢失任何精度信息,
+         * 后面要转为int/float/double也非常方便.
+         */
+        IN_DECIMAL, // 十进制
+        IN_OCT,     // 八进制
+        IN_HEX,     // 十六进制
+        IN_FLOAT,   // 浮点数值
         DONE
     } State;
 
@@ -80,8 +92,13 @@ namespace Compiler::Scanner {
             saveTokenString = true;
             switch (state) {
                 case START:
-                    if (isdigit(c) || c == '.') {
-                        state = INNUM;
+                    if (c == '.') {
+                        state = IN_FLOAT;
+                    } else if (c == '0') {
+                        state = IN_OCT;
+                    } else if (c == '1' || c == '2' || c == '3' || c == '4' || c == '5'
+                               || c == '6' || c == '7' || c == '8' || c == '9') {
+                        state = IN_DECIMAL;
                     } else if (isalpha(c)) {
                         state = INID;
                     } else if (c == ':') {
@@ -170,16 +187,61 @@ namespace Compiler::Scanner {
                         saveTokenString = true;
                     }
                     break;
-                case INNUM:
-                    if (!isdigit(c) && c != '.') {
+                case IN_DECIMAL:
+                    if (!isdigit(c)) {
+                        if (c == '.') state = IN_FLOAT;
+                        else {
+                            undoGetNextChar();
+                            saveTokenString = false;
+                            state = DONE;
+                            currentToken = NUM;
+                        }
+                    }
+                    break;
+                case IN_FLOAT:
+                    // 注意其他状态已经处理了第一次小数点的出现,所以这里只需要处理[小数部分]即可,一旦发现非数字就结束.
+                    // 当然这样做在处理像 0.2555.23555.356.33 的时候会切成: 0.2555 .23555 .356 .33 四个NUM,
+                    // 看上去好像是很不合理的,但是在词法分析这一轮我们不关心语法的问题,只要把词切出来即可,
+                    // 后面语法分析很容易就可以分析出　NUM NUM NUM NUM 这样的句子是非法的.
+                    // 另外这里有一些特殊情况需要处理:
+                    // 比如.021或者12.这些值是允许的,可以认为是 0.021 以及 12.0, 但如果只有单独一个小数点,则是非法的Token
+                    if (!isdigit(c)) {
                         undoGetNextChar();
                         saveTokenString = false;
                         state = DONE;
-                        if (tokenString == "." ||
-                            // 使用 std::count(begin,end,find_)可以非常容易得到一个find_在容器出现的次数..
-                            std::count(tokenString.begin(), tokenString.end(), '.') > 1) {
+                        if (tokenString == ".") currentToken = ERROR; // 只出现一个小数点,Token非法.
+                        else currentToken = NUM;
+                    }
+                    break;
+                case IN_OCT:
+                    if (c == 'x' || c == 'X') {
+                        state = IN_HEX;  // 0x或者0X
+                    } else if (c == '.') {
+                        state = IN_FLOAT; // 0. 浮点数值
+                    } else if (!(c == '0' || c == '1' || c == '2' || c == '3'
+                                 || c == '4' || c == '5' || c == '6' || c == '7')) {
+                        // 这里不需要对c=='8'或者c=='9'或者其他情况做错误分析处理,直接丢给下一个Token即可,
+                        // 反正后面语法分析的时候很容易就可以发现这些错误了,
+                        // 比如 int a := 0147999,切成 INT ID := NUM(0147) NUM(999),根据语法完全可以判断出错误.
+                        undoGetNextChar();
+                        saveTokenString = false;
+                        state = DONE;
+                        currentToken = NUM;
+                        // 如果输入串只是一个"0",不需要严肃区分十进制的0和八进制的0,因为值都一样,而且都是NUM型Token.
+                    }
+                    break;
+                case IN_HEX:
+                    if (!(isdigit(c) || c == 'a' || c == 'A' || c == 'b' || c == 'B' || c == 'c' || c == 'C' ||
+                          c == 'd' || c == 'D' || c == 'e' || c == 'E' || c == 'f' || c == 'F')) {
+                        if (tokenString == "0x" || tokenString == "0X") {
+                            // 只有一个0x或者0X,是无法构成数值的,token为ERROR.
                             currentToken = ERROR;
-                        } else currentToken = NUM;
+                        } else {
+                            currentToken = NUM;
+                        }
+                        undoGetNextChar();
+                        saveTokenString = false;
+                        state = DONE;
                     }
                     break;
                 case INID:
