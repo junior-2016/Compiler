@@ -14,7 +14,7 @@ namespace Compiler {
             if (tokenString.size() > 1 && (tokenString[1] == 'x' || tokenString[1] == 'X')) {
                 return NUM_TYPE::HEX;
             }
-            return NUM_TYPE::OCT;
+            return tokenString == "0" ? NUM_TYPE::DECIMAL : NUM_TYPE::OCT;
         }
         return NUM_TYPE::DECIMAL;
     }

@@ -7,7 +7,16 @@
 
 #include "Compiler.h"
 #include "Token.h"
-
+/**
+ * 基于 LL(1) 文法的手写递归下降语法分析器. LL(1)文法也就是 backtracking-free 文法(无需递归后回溯搜索)
+ * LL(1) 文法(left to right scan source & left most derivation & lookahead 1 token)的基本要求:
+ * 1. 消除语法的二义性,即不能拥有两个最左推导或者两个最右推导(要求语法树的唯一性);
+ * 2. 消除左递归以及间接的左递归;
+ * 3. 消除语法的左因子,比如　S -> aB | aC | aD ,需要消除左因子a,变成 S->aE ; E->B|C|D. 这样就可以避免回溯.
+ * 消除语法左因子的最终结果是 V->P1|P2|... 其中任意两个产生式 V->Pi 和 V->Pj 的 First+ 集的交集为空.
+ * (当然还可以考虑自动计算First+集的语法分析生成器.)
+ * 除了上面三个基本要求,还有优先级要求,一般优先级按照优先级高低,先推导出低优先级的产生式,最后再推导高优先级的产生式.
+ */
 namespace Compiler::Parser {
     /* 语法分析树节点类型 */
     enum class NodeKind {

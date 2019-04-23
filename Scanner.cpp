@@ -227,7 +227,7 @@ namespace Compiler::Scanner {
                         saveTokenString = false;
                         state = DONE;
                         currentToken = NUM;
-                        // 如果输入串只是一个"0",不需要严肃区分十进制的0和八进制的0,因为值都一样,而且都是NUM型Token.
+                        // 如果输入串只是一个"0",虽然是十进制,但Token类型依旧是NUM型,所以不用额外处理.
                     }
                     break;
                 case IN_HEX:

@@ -23,7 +23,7 @@ namespace Compiler {
             file = pair.second;
             while (getToken().tokenType != END_FILE);
             if (ExceptionHandle::getHandle().hasException()) {
-                std::cerr << "Process File " << pair.first << " has exceptions:\n" <<
+                std::cout << "Process File " << pair.first << " has exceptions:\n" <<
                           ExceptionHandle::getHandle();
                 return;
             } else {
