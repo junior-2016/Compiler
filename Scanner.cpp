@@ -25,7 +25,7 @@ namespace Compiler::Scanner {
          * 因此,数值常量都当做NUM型,并且都用字符串储存数值才是最佳选择,而且用字符串储存不会丢失任何精度信息,
          * 后面要转为int/float/double也非常方便.
          */
-        IN_DECIMAL, // 十进制
+                IN_DECIMAL, // 十进制
         IN_OCT,     // 八进制
         IN_HEX,     // 十六进制
         IN_FLOAT,   // 浮点数值
@@ -96,8 +96,7 @@ namespace Compiler::Scanner {
                         state = IN_FLOAT;
                     } else if (c == '0') {
                         state = IN_OCT;
-                    } else if (c == '1' || c == '2' || c == '3' || c == '4' || c == '5'
-                               || c == '6' || c == '7' || c == '8' || c == '9') {
+                    } else if (c >= '1' && c <= '9') {
                         state = IN_DECIMAL;
                     } else if (isalpha(c)) {
                         state = INID;
@@ -214,25 +213,25 @@ namespace Compiler::Scanner {
                     }
                     break;
                 case IN_OCT:
-                    if (c == 'x' || c == 'X') {
-                        state = IN_HEX;  // 0x或者0X
-                    } else if (c == '.') {
-                        state = IN_FLOAT; // 0. 浮点数值
-                    } else if (!(c == '0' || c == '1' || c == '2' || c == '3'
-                                 || c == '4' || c == '5' || c == '6' || c == '7')) {
-                        // 这里不需要对c=='8'或者c=='9'或者其他情况做错误分析处理,直接丢给下一个Token即可,
-                        // 反正后面语法分析的时候很容易就可以发现这些错误了,
-                        // 比如 int a := 0147999,切成 INT ID := NUM(0147) NUM(999),根据语法完全可以判断出错误.
-                        undoGetNextChar();
-                        saveTokenString = false;
-                        state = DONE;
-                        currentToken = NUM;
-                        // 如果输入串只是一个"0",虽然是十进制,但Token类型依旧是NUM型,所以不用额外处理.
+                    if (!(c >= '0' && c <= '7')) {
+                        if ((c == 'x' || c == 'X') && tokenString == "0") {
+                            state = IN_HEX;  // 0x或者0X
+                        } else if (c == '.') {
+                            state = IN_FLOAT; // [0-7]+. 浮点数值
+                        } else {
+                            // 这里不需要对c=='8'或者c=='9'或者其他情况做错误分析处理,直接丢给下一个Token即可,
+                            // 反正后面语法分析的时候很容易就可以发现这些错误了,
+                            // 比如 int a := 0147999,切成 INT ID := NUM(0147) NUM(999),根据语法完全可以判断出错误.
+                            undoGetNextChar();
+                            saveTokenString = false;
+                            state = DONE;
+                            currentToken = NUM;
+                            // 如果输入串只是一个"0",虽然是十进制,但Token类型依旧是NUM型,所以不用额外处理.
+                        }
                     }
                     break;
                 case IN_HEX:
-                    if (!(isdigit(c) || c == 'a' || c == 'A' || c == 'b' || c == 'B' || c == 'c' || c == 'C' ||
-                          c == 'd' || c == 'D' || c == 'e' || c == 'E' || c == 'f' || c == 'F')) {
+                    if (!(isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
                         if (tokenString == "0x" || tokenString == "0X") {
                             // 只有一个0x或者0X,是无法构成数值的,token为ERROR.
                             currentToken = ERROR;
