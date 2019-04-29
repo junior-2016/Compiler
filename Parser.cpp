@@ -10,12 +10,19 @@
 namespace Compiler::Parser {
     Scanner::TokenRet token;
 
-    inline auto match(TokenType target) {
+    inline void syntax_error_report() {
         using namespace Compiler::Exception;
+        ExceptionHandle::getHandle().add_exception(
+                ExceptionType::SYNTAX_ERROR, std::string("Not match token ")
+                                             + *token.tokenString
+                                             + std::string(" on line:")
+                                             + std::to_string(token.lineNumber));
+    }
+
+    inline auto match(TokenType target) {
         if (token.tokenType == target) token = Scanner::getToken();
         else {
-            ExceptionHandle::getHandle().add_exception(
-                    ExceptionType::SYNTAX_ERROR, "Not match token on line:" + std::to_string(token.lineNumber));
+            syntax_error_report();
         }
     }
 
@@ -31,6 +38,10 @@ namespace Compiler::Parser {
      *  另外一种方案是引入更多的变量将它变成非歧义的文法,比如JAVA语言(参考Java的EBNF).
      */
     node if_else_statement() {
+        return nullptr;
+    }
+
+    node assign_statement() {
         return nullptr;
     }
 
@@ -59,25 +70,52 @@ namespace Compiler::Parser {
     }
 
     node statement() {
-        return nullptr;
+        using namespace Compiler::Exception;
+        node n = nullptr;
+        switch (token.tokenType) {
+            case TokenType::IF:
+                n = if_else_statement();
+                break;
+            case TokenType::REPEAT:
+                n = repeat_until_statement();
+                break;
+            case TokenType::ID:
+                n = assign_statement();
+                break;
+            case TokenType::READ:
+                n = read_statement();
+                break;
+            case TokenType::WRITE:
+                n = write_statement();
+                break;
+            default:
+                syntax_error_report();
+                token = Scanner::getToken();
+                break;
+        }
+        return n;
     }
 
     /**
-     * stmt_sequence -> statement { ; statement }
+     * statement_sequence -> statement { ; statement }*
+     * 解析时
+     *          statement_sequence
+     *                  |
+     *        stat ; stat ; stat; stat; ...
      */
-    node stmt_sequence() {
+    node statement_sequence() {
         node n = statement();
         node p = n;
-        while (token.tokenType == TokenType::SEMI) {
+        while (token.tokenType == SEMI) {
             match(TokenType::SEMI);
-            node t = statement();
-            if (n == nullptr) {
-                n = t;
-                p = t;
-            } else {
-                if (t != nullptr) {
-                    p->sibling = t;
-                    p = t;
+            node q = statement();
+            if (q != nullptr) {
+                if (n == nullptr) {
+                    n = q;
+                    p = q;
+                } else {
+                    p->sibling = q;
+                    p = q;
                 }
             }
         }
@@ -90,7 +128,7 @@ namespace Compiler::Parser {
     node parse() {
         using namespace Compiler::Exception;
         token = Scanner::getToken();
-        auto t = stmt_sequence();
+        auto t = statement_sequence();
         if (token.tokenType != END_FILE) {
             ExceptionHandle::getHandle().add_exception(
                     ExceptionType::SYNTAX_ERROR, "Parser don't reach END_FILE finally");
