@@ -29,15 +29,17 @@ namespace Compiler::Parser {
     /**
      * if-else statement:
      * C语言的文法是:
-     *  statement = ... | selection-statement
-     *  selection-statement = ... | if ( expression ) statement | if ( expression ) statement else statement
+     *  statement => ... | selection-statement
+     *  selection-statement => ... | if ( expression ) statement | if ( expression ) statement else statement
      *  这个是有歧义的,对于 if (expr) if (expr) else stat 会有:
      *  if (expr) { if (expr) else stat } 和
      *  if (expr) { if (expr) } else stat 两种树.
      *  C语言的解决方案是只选择第一颗树,即选择靠近else的if进行解析;
      *  另外一种方案是引入更多的变量将它变成非歧义的文法,比如JAVA语言(参考Java的EBNF).
+     *  暂时不考虑 if else 嵌套的问题
      */
     node if_else_statement() {
+
         return nullptr;
     }
 

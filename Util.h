@@ -13,7 +13,8 @@ namespace Compiler {
         DECIMAL,
         OCT,
         HEX,
-        FLOAT
+        FLOAT,
+        DOUBLE
     };
 
     /**

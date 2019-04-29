@@ -23,41 +23,47 @@ namespace Compiler::Parser {
         StmtK, ExpK
     };
 
-    /* 语句类型 */
+    /* statement type 分类 */
     enum class StmtKind {
         IfK, RepeatK, AssignK, ReadK, WriteK, WhileK
     };
 
-    /* 表达式类型 */
+    /* expression type 分类 */
     enum class ExpKind {
         OpK, ConstK, IdK
     };
 
-    /* 类型检查 */
+    /* 用于类型检查 */
     enum class ExpType {
-        Void, Integer, Boolean
+        Void, Integer, Boolean, String, Float
     };
 
     typedef struct TreeNode *node;
+
     struct TreeNode {
         std::vector<node> childs;
         node sibling;
         int lineNumber;
         // 选择 nodeking => 选择 kind
         NodeKind nodeKind;
-        union {
-            StmtKind stmtKind;
-            ExpKind expKind;
-        } kind;
-        union {
-            TokenType op; // 符号型Token(运算,逻辑符号等)
-            int i_val;    // int型
-            float f_val;  // float型
-            double d_val; // double型
-            std::shared_ptr<std::string> name; // ID型Token
-        } attribute; // 节点属性
+        std::variant<
+                StmtKind, /*stmtKind*/
+                ExpKind   /*expKind*/
+        > kind;
+        std::variant<
+                TokenType, /* 符号型Token(运算,逻辑符号等),声明类型的Token */
+                int,       /* 解析整型常量(10/16/8进制)的字符串为int类型的值,储存在节点属性值里 */
+                float,     /* 解析单精度浮点常量(f/F结尾)的字符串为float类型的值,储存在节点属性值里 */
+                double,    /* 解析双精度浮点常量的字符串为double类型的值,储存在节点属性值里 */
+                std::shared_ptr<std::string> /* ID型Token的名称 */
+        > attribute; // 节点属性
         ExpType type; // for type checking
     };
+
+    node newStatementNode(StmtKind stmtKind) {
+        node n = new TreeNode;
+        return n;
+    }
 
     node parse();
 }

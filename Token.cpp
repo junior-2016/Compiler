@@ -147,6 +147,9 @@ namespace Compiler {
                     case NUM_TYPE::FLOAT:
                         numType = "FLOAT";
                         break;
+                    case NUM_TYPE::DOUBLE:
+                        numType = "DOUBLE";
+                        break;
                 }
                 fprintf(OUTPUT_STREAM, "NUMBER, val=%s, type=%s\n", tokenString.c_str(), numType.c_str());
                 break;

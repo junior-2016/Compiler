@@ -19,16 +19,20 @@ namespace Compiler::Scanner {
         /*
          * 下面的 DECIMAL,OCT,HEX,FLOAT 都会被解析为 NUM（数值常量型）Token.
          * 而不会分成四种Token来处理,原因很简单,在没有语法语义分析之前尚不能确定它们所指变量的实际类型,
-         * 比如 int a = 1.23; 实际a的类型为int,只有后面语义分析的时候得到类型信息,
-         * 我们才能将此时的NUM=1.23取出,然后cast为int型,再赋值,最后是 a=1.
-         * 所以不能轻易认为词法得到的Float以后赋值也是浮点数.
-         * 因此,数值常量都当做NUM型,并且都用字符串储存数值才是最佳选择,而且用字符串储存不会丢失任何精度信息,
-         * 后面要转为int/float/double也非常方便.
+         * 比如 int a = 1.23; 实际a的类型为int,只有后面语法语义分析的时候才能正确解析:
+         * 在语法分析的时候,解析常量 1.23 的属性为 double ,然后储存在语法树节点里;
+         * 在语义分析里,根据a的类型为int,选择将常量1.23转换为int型,再赋值给a,最后a的值是1.
+         * 因此,数值常量都当做NUM型,都用字符串储存数值才是最佳选择,用字符串储存不会丢失任何精度信息,
+         * 在后面语法分析设置语法树节点属性值(int/double/float)的时候也比较容易cast.
+         *
+         * TODO: 现在还有个负数常量没有解决,我之前考虑将所有的整型常量(16/10/8进制)都看成没有符号的(但是在语法树节点属性里依旧设置为int属性).
+         *   实际处理负号(-)或者正号(+)是通过解析为运算符解决,但是运算符只能处理 NUM (+/- NUM)* 的情况, 如果是单独一个 (+/-)NUM
+         *   就不行了. 这里考虑的解决方案是: 给正负运算规则加上 (+/-)NUM 的规则,在语义分析里,这个规则的语义是: 0 (+/-) NUM.
          */
-                IN_DECIMAL, // 十进制
+        IN_DECIMAL,  // 十进制
         IN_OCT,     // 八进制
         IN_HEX,     // 十六进制
-        IN_FLOAT,   // 浮点数值
+        IN_FLOAT,   // 浮点数值常量,包括双精度浮点常量和单精度浮点常量(最后带一个f或者F)
         DONE
     } State;
 
@@ -205,11 +209,19 @@ namespace Compiler::Scanner {
                     // 另外这里有一些特殊情况需要处理:
                     // 比如.021或者12.这些值是允许的,可以认为是 0.021 以及 12.0, 但如果只有单独一个小数点,则是非法的Token
                     if (!isdigit(c)) {
-                        undoGetNextChar();
-                        saveTokenString = false;
+                        if (tokenString == ".") {
+                            undoGetNextChar();
+                            saveTokenString = false;
+                            currentToken = ERROR; // 只出现一个小数点,Token非法.
+                        } else {
+                            if (c != 'f' && c != 'F') {
+                                // 如果是末尾带一个f或者F,不需要undoGetNextChar,同时需要把f/F附加到tokenString
+                                undoGetNextChar();
+                                saveTokenString = false;
+                            }
+                            currentToken = NUM;
+                        }
                         state = DONE;
-                        if (tokenString == ".") currentToken = ERROR; // 只出现一个小数点,Token非法.
-                        else currentToken = NUM;
                     }
                     break;
                 case IN_OCT:
