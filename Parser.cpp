@@ -8,15 +8,43 @@
 #include "StringLiteralPool.h"
 
 namespace Compiler::Parser {
+    /* parse tree node */
+    node newStatementNode(StmtKind stmtKind);
+
+    node newExpressionNode(ExpKind expKind);
+
+    /* statement  */
+    node statement_sequence();
+
+    node statement();
+
+    node if_else_statement();
+
+    node assign_statement();
+
+    node do_while_statement();
+
+    node repeat_until_statement();
+
+    node read_statement();
+
+    node write_statement();
+
+    node function_statement();
+
+    /* expression */
+    node expression();
+
     Scanner::TokenRet token;
 
     inline void syntax_error_report() {
         using namespace Compiler::Exception;
         ExceptionHandle::getHandle().add_exception(
-                ExceptionType::SYNTAX_ERROR, std::string("Not match token ")
-                                             + *token.tokenString
-                                             + std::string(" on line:")
-                                             + std::to_string(token.lineNumber));
+                ExceptionType::SYNTAX_ERROR,
+                std::string("Not match token ")
+                + *token.tokenString
+                + std::string(" on line:")
+                + std::to_string(Scanner::lineNumber));
     }
 
     inline auto match(TokenType target) {
@@ -36,39 +64,100 @@ namespace Compiler::Parser {
      *  if (expr) { if (expr) } else stat 两种树.
      *  C语言的解决方案是只选择第一颗树,即选择靠近else的if进行解析;
      *  另外一种方案是引入更多的变量将它变成非歧义的文法,比如JAVA语言(参考Java的EBNF).
-     *  暂时不考虑 if else 嵌套的问题
+     *
+     *  这里使用的是C的方案,即:
+     *  statement_sequence => statement {; statement }*
+     *  statement => if_else_statement | .. | ..
+     *  if_else_statement => if expression then statement_sequence | if expression then statement_sequence else statement_sequence
+     *  在解析像 if expr then if expr then stat_sequence else stat_sequence end 时:
+     *  必然会解析成 Start -> ... -> if [expr] then [stat_sequence] ->
+     *                      ... -> if [expr] then [ if [expr] then [stat_sequence] else [stat_sequence] end ]
      */
     node if_else_statement() {
-
-        return nullptr;
+        node n = newStatementNode(StmtKind::IfK);
+        match(TokenType::IF);
+        if (n != nullptr) n->childs.push_back(expression());
+        match(TokenType::THEN);
+        if (n != nullptr) n->childs.push_back(statement_sequence());
+        if (token.tokenType == TokenType::ELSE) { // 这里必须写成 if(token_type is ELSE){ match (ELSE); ...},代表一种可选的推导分支
+            match(TokenType::ELSE);
+            if (n != nullptr) n->childs.push_back(statement_sequence());
+        }
+        match(TokenType::END);
+        return n;
     }
 
+    /**
+     * assign_statement => ID := expression
+     */
     node assign_statement() {
-        return nullptr;
+        node n = newStatementNode(StmtKind::AssignK);
+        if (n != nullptr && token.tokenType == TokenType::ID) {
+            n->attribute = token.tokenString;
+        }
+        match(TokenType::ID);
+        match(TokenType::ASSIGN);
+        if (n != nullptr) n->childs.push_back(expression());
+        return n;
     }
 
+    /**
+     * do_while_statement => do statement_sequence while expression
+     */
     node do_while_statement() {
-        return nullptr;
+        node n = newStatementNode(StmtKind::WhileK);
+        match(TokenType::DO);
+        if (n != nullptr) n->childs.push_back(statement_sequence());
+        match(TokenType::WHILE);
+        if (n != nullptr) n->childs.push_back(expression());
+        return n;
     }
 
+    /**
+     * repeat_until_statement => repeat statement_sequence until expression
+     */
     node repeat_until_statement() {
-        return nullptr;
+        node n = newStatementNode(StmtKind::RepeatK);
+        match(TokenType::REPEAT);
+        if (n != nullptr) n->childs.push_back(statement_sequence());
+        match(TokenType::UNTIL);
+        if (n != nullptr) n->childs.push_back(expression());
+        return n;
     }
 
+    /**
+     * read_statement => read ID
+     */
     node read_statement() {
-        return nullptr;
+        node n = newStatementNode(StmtKind::ReadK);
+        match(TokenType::READ);
+        if (n != nullptr && token.tokenType == TokenType::ID) {
+            n->attribute = token.tokenString;
+        }
+        match(TokenType::ID);
+        return n;
     }
 
+    /**
+     * write_statement => write expression
+     */
     node write_statement() {
-        return nullptr;
+        node n = newStatementNode(StmtKind::WriteK);
+        match(TokenType::WRITE);
+        if (n != nullptr) n->childs.push_back(expression());
+        return n;
     }
 
+    // TODO: 引入function的文法
     node function_statement() {
-        return nullptr;
+        node n = new TreeNode;
+        return n;
     }
 
     node expression() {
-        return nullptr;
+        node n = nullptr;
+
+        return n;
     }
 
     node statement() {
@@ -130,11 +219,28 @@ namespace Compiler::Parser {
     node parse() {
         using namespace Compiler::Exception;
         token = Scanner::getToken();
-        auto t = statement_sequence();
+        auto root = statement_sequence();
         if (token.tokenType != END_FILE) {
             ExceptionHandle::getHandle().add_exception(
                     ExceptionType::SYNTAX_ERROR, "Parser don't reach END_FILE finally");
         }
-        return t;
+        return root;
+    }
+
+    node newStatementNode(StmtKind stmtKind) {
+        node n = new TreeNode;
+        n->lineNumber = Scanner::lineNumber;
+        n->nodeKind = NodeKind::StmtK;
+        n->kind = stmtKind;
+        return n;
+    }
+
+    node newExpressionNode(ExpKind expKind) {
+        node n = new TreeNode;
+        n->lineNumber = Scanner::lineNumber;
+        n->nodeKind = NodeKind::ExpK;
+        n->kind = expKind;
+        n->expType = ExpType::Void;
+        return n;
     }
 }

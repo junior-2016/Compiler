@@ -13,9 +13,11 @@ namespace Compiler {
                 END_FILE, ERROR,
 
         /* 关键字 */
-                IF, THEN, ELSE, ELSEIF, END,          // IF 语句
+                IF, THEN, ELSE,                      // IF 语句
                 REPEAT, UNTIL, DO, WHILE,             // 循环语句
+                END,                                // 控制流终止
                 READ, WRITE,                         // IO
+
 
                 TRUE, FALSE, OR, AND, NOT,
                 // 逻辑布尔运算(逻辑操作主要是在if和循环的condition条件上用到)

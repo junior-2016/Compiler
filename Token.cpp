@@ -16,7 +16,6 @@ namespace Compiler {
                 {"if",     IF},
                 {"then",   THEN},
                 {"else",   ELSE},
-                {"elseif", ELSEIF},
                 {"end",    END},
                 {"repeat", REPEAT},
                 {"until",  UNTIL},
@@ -62,7 +61,6 @@ namespace Compiler {
             case IF:
             case THEN:
             case ELSE:
-            case ELSEIF:
             case END:
             case REPEAT:
             case UNTIL:

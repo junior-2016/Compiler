@@ -10,8 +10,9 @@
 
 namespace Compiler::Scanner {
 
+    extern int lineNumber;
+
     struct TokenRet {
-        int lineNumber;
         TokenType tokenType;
         std::shared_ptr<std::string> tokenString;
     };

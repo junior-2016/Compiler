@@ -71,7 +71,6 @@ namespace Compiler::Scanner {
         if (!EOF_flag) pos--;
     }
 
-    // TODO: 加入对多种进制的处理
     TokenRet getToken() {
         using namespace Compiler::Exception;
         std::string tokenString;
@@ -331,7 +330,7 @@ namespace Compiler::Scanner {
         } else { // 其他类型的Token,比如关键字,特殊符号,END_FILE,ERROR等等,都不需要一个TokenString.
             ptr = nullptr;
         }
-        return {lineNumber, currentToken, ptr};
+        return {currentToken, ptr};
     }
 
     void clearAll() {
