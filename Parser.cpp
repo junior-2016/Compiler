@@ -35,6 +35,8 @@ namespace Compiler::Parser {
     /* expression */
     node expression();
 
+    node arithmetic_expression();
+
     Scanner::TokenRet token;
 
     inline void syntax_error_report() {
@@ -68,10 +70,18 @@ namespace Compiler::Parser {
      *  这里使用的是C的方案,即:
      *  statement_sequence => statement {; statement }*
      *  statement => if_else_statement | .. | ..
-     *  if_else_statement => if expression then statement_sequence | if expression then statement_sequence else statement_sequence
-     *  在解析像 if expr then if expr then stat_sequence else stat_sequence end 时:
-     *  必然会解析成 Start -> ... -> if [expr] then [stat_sequence] ->
-     *                      ... -> if [expr] then [ if [expr] then [stat_sequence] else [stat_sequence] end ]
+     *  if_else_statement => if expression then statement_sequence end
+     *                   | if expression then statement_sequence else statement_sequence end
+     *  解析如下语句:
+     *           if expr then
+     *               if expr then
+     *                   stat_sequence
+     *               else
+     *                   stat_sequence
+     *               end
+     *           end
+     *  过程: Start -> ... -> if [expr] then [stat_sequence] end ->
+     *                ... -> if [expr] then [ if [expr] then [stat_sequence] else [stat_sequence] end ] end
      */
     node if_else_statement() {
         node n = newStatementNode(StmtKind::IfK);
@@ -151,12 +161,34 @@ namespace Compiler::Parser {
     // TODO: 引入function的文法
     node function_statement() {
         node n = new TreeNode;
+
         return n;
     }
 
     node expression() {
-        node n = nullptr;
+        node n = arithmetic_expression();
+        if (token.tokenType == TokenType::LT
+            || token.tokenType == TokenType::BT
+            || token.tokenType == TokenType::EQ
+            || token.tokenType == TokenType::NE
+            || token.tokenType == TokenType::LE
+            || token.tokenType == TokenType::BE) {
+            node p = newExpressionNode(ExpKind::OpK);
+            if (p != nullptr) {
+                p->childs.push_back(n);
+                p->attribute = token.tokenType;
+                n = p;
+            }
+            match(token.tokenType); // 这里的match必成功
+            if (n != nullptr) {
+                n->childs.push_back(arithmetic_expression());
+            }
+        }
+        return n;
+    }
 
+    node arithmetic_expression() {
+        node n = new TreeNode;
         return n;
     }
 
@@ -169,6 +201,9 @@ namespace Compiler::Parser {
                 break;
             case TokenType::REPEAT:
                 n = repeat_until_statement();
+                break;
+            case TokenType::DO:
+                n = do_while_statement();
                 break;
             case TokenType::ID:
                 n = assign_statement();

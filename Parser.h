@@ -51,7 +51,7 @@ namespace Compiler::Parser {
         ExpType expType; // for expression type checking
 
         std::variant<
-                TokenType, /* 符号型Token(运算,逻辑符号等),声明类型的Token */
+                TokenType, /* 运算逻辑符号Token(operator)或者声明类型的Token(data type) */
                 int,       /* 解析整型常量(10/16/8进制)的字符串为int类型的值,储存在节点属性值里 */
                 float,     /* 解析单精度浮点常量(f/F结尾)的字符串为float类型的值,储存在节点属性值里 */
                 double,    /* 解析双精度浮点常量的字符串为double类型的值,储存在节点属性值里 */
