@@ -5,7 +5,7 @@
 #ifndef SCANNER_COMPILER_H
 #define SCANNER_COMPILER_H
 
-// global include
+// global include(不要包含Util.h, Util.h需要用的时候再包含, 否则Util.h里面定义的一些类型别名可能报错)
 #include <algorithm>
 #include <cinttypes>
 #include <variant>
