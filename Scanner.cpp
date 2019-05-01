@@ -317,7 +317,7 @@ namespace Compiler::Scanner {
                 }
             }
         }
-        if (TRACE_SCAN) {
+        if (TRACE_SCANNER) {
             fprintf(OUTPUT_STREAM, "\t%d ", lineNumber);
             printToken(currentToken, tokenString);
         }

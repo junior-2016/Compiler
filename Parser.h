@@ -30,16 +30,15 @@ namespace Compiler::Parser {
 
     /* expression type 分类 */
     enum class ExpKind {
-        OpK, ConstK, IdK
+        OpK, ConstIntK, ConstFloatK, ConstDoubleK, IdK
     };
 
     /* 用于类型检查 */
     enum class ExpType {
-        Void, Integer, Boolean, String, Float
+        Void, Integer, Boolean, String, Float, Double
     };
 
-    typedef struct TreeNode *node;
-
+    using node = struct TreeNode *;
     struct TreeNode {
         std::vector<node> childs;
         node sibling = nullptr;
@@ -60,5 +59,7 @@ namespace Compiler::Parser {
     };
 
     node parse();
+
+    void printTree(node n);
 }
 #endif //SCANNER_PARSER_H

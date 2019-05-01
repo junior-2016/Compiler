@@ -6,6 +6,7 @@
 #include "Scanner.h"
 #include "Exception.h"
 #include "StringLiteralPool.h"
+#include "Util.h"
 
 namespace Compiler::Parser {
     /* parse tree node */
@@ -36,6 +37,10 @@ namespace Compiler::Parser {
     node expression();
 
     node arithmetic_expression();
+
+    node arithmetic_term();
+
+    node arithmetic_factor();
 
     Scanner::TokenRet token;
 
@@ -165,6 +170,9 @@ namespace Compiler::Parser {
         return n;
     }
 
+    /**
+     * expression => expr { < | > | <= | >= | = | !=  expr }?
+     */
     node expression() {
         node n = arithmetic_expression();
         if (token.tokenType == TokenType::LT
@@ -187,8 +195,97 @@ namespace Compiler::Parser {
         return n;
     }
 
+    /**
+     * expr => term { +|- term }*
+     * eg:
+     *           -(op) => return
+     *     +(op)        term
+     * term    term
+     */
     node arithmetic_expression() {
-        node n = new TreeNode;
+        node n = arithmetic_term();
+        while (token.tokenType == TokenType::PLUS || token.tokenType == TokenType::MINUS) {
+            node p = newExpressionNode(ExpKind::OpK);
+            if (p != nullptr) {
+                p->attribute = token.tokenType;
+                p->childs.push_back(n);
+                n = p;
+                match(token.tokenType);
+                n->childs.push_back(arithmetic_term());
+            }
+        }
+        return n;
+    }
+
+    /**
+     * term => factor { *|/ factor }*
+     * eg:
+     *           /(op) => return
+     *     *(op)       factor
+     * factor  factor
+     */
+    node arithmetic_term() {
+        node n = arithmetic_factor();
+        while (token.tokenType == TokenType::TIMES || token.tokenType == TokenType::OVER) {
+            node p = newExpressionNode(ExpKind::OpK);
+            if (p != nullptr) {
+                p->attribute = token.tokenType;
+                p->childs.push_back(n);
+                n = p;
+                match(token.tokenType);
+                n->childs.push_back(arithmetic_factor());
+            }
+        }
+        return n;
+    }
+
+    /**
+     * factor => ID | NUM | ( expression )
+     */
+    node arithmetic_factor() {
+        node n = nullptr;
+        switch (token.tokenType) {
+            case NUM:
+                try {
+                    switch (getNumType(*token.tokenString)) {
+                        case NUM_TYPE::DECIMAL:
+                        case NUM_TYPE::OCT:
+                        case NUM_TYPE::HEX:
+                            n = newExpressionNode(ExpKind::ConstIntK);
+                            if (n != nullptr) n->attribute = std::stoi(*token.tokenString);// 16/10/8 进制字符串转换为整数
+                            break;
+                        case NUM_TYPE::FLOAT:
+                            n = newExpressionNode(ExpKind::ConstFloatK);
+                            if (n != nullptr) n->attribute = std::stof(*token.tokenString);
+                            break;
+                        case NUM_TYPE::DOUBLE:
+                            n = newExpressionNode(ExpKind::ConstDoubleK);
+                            if (n != nullptr) n->attribute = std::stod(*token.tokenString);
+                            break;
+                    }
+                } catch (std::invalid_argument &e) {
+                    std::cerr << "arithmetic_factor() convert number "
+                              << *token.tokenString << " error:" << e.what() << "\n";
+                }
+                match(TokenType::NUM);
+                break;
+            case ID:
+                n = newExpressionNode(ExpKind::IdK);
+                if (n != nullptr) {
+                    n->attribute = token.tokenString;
+                }
+                match(TokenType::ID);
+                break;
+            case LPAREN:
+                match(TokenType::LPAREN);
+                n = arithmetic_expression();
+                match(TokenType::RPAREN);
+                break;
+            default:
+                syntax_error_report();
+                token = Scanner::getToken();
+                break;
+        }
         return n;
     }
 
@@ -277,5 +374,9 @@ namespace Compiler::Parser {
         n->kind = expKind;
         n->expType = ExpType::Void;
         return n;
+    }
+
+    void printTree(node n) {
+
     }
 }
