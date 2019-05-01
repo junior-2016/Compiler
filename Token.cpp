@@ -2,7 +2,6 @@
 // Created by junior on 19-4-7.
 //
 #include "Token.h"
-#include "Util.h"
 
 namespace Compiler {
     // 下面两个表(关键字表和合法字符表),本来是可以直接写成静态成员的,
@@ -55,8 +54,95 @@ namespace Compiler {
         return table;
     }
 
-    void printToken(TokenType type, std::string &tokenString) {
+    std::string getTokenRepresentation(TokenType type, const string_ptr &ptr) {
+        switch (type) {
+            case IF:
+                return "if";
+            case THEN:
+                return "then";
+            case ELSE:
+                return "else";
+            case END:
+                return "end";
+            case REPEAT:
+                return "repeat";
+            case UNTIL:
+                return "until";
+            case DO:
+                return "do";
+            case WHILE:
+                return "while";
+            case READ:
+                return "read";
+            case WRITE:
+                return "write";
+            case TRUE:
+                return "true";
+            case FALSE:
+                return "false";
+            case OR:
+                return "or";
+            case AND:
+                return "and";
+            case NOT:
+                return "not";
+            case INT:
+                return "int";
+            case BOOL:
+                return "bool";
+            case FLOAT:
+                return "float";
+            case DOUBLE:
+                return "double";
+            case STRING:
+                return "string";
+            case ASSIGN:
+                return ":=";
+            case LT:
+                return "<";
+            case BT:
+                return ">";
+            case EQ:
+                return "=";
+            case LE:
+                return "<=";
+            case BE:
+                return ">=";
+            case NE:
+                return "!=";
+            case LPAREN:
+                return "(";
+            case RPAREN:
+                return ")";
+            case SEMI:
+                return ";";
+            case COMMA:
+                return ",";
+            case PLUS:
+                return "+";
+            case MINUS:
+                return "-";
+            case TIMES:
+                return "*";
+            case OVER:
+                return "/";
+            case END_FILE:
+                return "EOF";
+            case STR:
+                return (ptr != nullptr) ? *ptr : "STR";
+            case ID:
+                return (ptr != nullptr) ? *ptr : "ID";
+            case NUM:
+                return (ptr != nullptr) ? *ptr : "NUM";
+            case ERROR:
+                return (ptr != nullptr) ? *ptr : "ERROR";
+        }
+        return (ptr != nullptr) ? *ptr : "";
+    }
+
+    void printToken(TokenType type, const string_ptr &ptr) {
         std::string numType;
+        std::string representation = getTokenRepresentation(type, ptr);
         switch (type) {
             case IF:
             case THEN:
@@ -78,61 +164,28 @@ namespace Compiler {
             case FLOAT:
             case DOUBLE:
             case STRING:
-                fprintf(OUTPUT_STREAM, "reserved word: %s\n", tokenString.c_str());
+                fprintf(OUTPUT_STREAM, "reserved word: %s\n", representation.c_str());
                 break;
             case ASSIGN:
-                fprintf(OUTPUT_STREAM, ":=\n");
-                break;
             case LT:
-                fprintf(OUTPUT_STREAM, "<\n");
-                break;
             case BT:
-                fprintf(OUTPUT_STREAM, ">\n");
-                break;
             case EQ:
-                fprintf(OUTPUT_STREAM, "=\n");
-                break;
             case LE:
-                fprintf(OUTPUT_STREAM, "<=\n");
-                break;
             case BE:
-                fprintf(OUTPUT_STREAM, ">=\n");
-                break;
             case NE:
-                fprintf(OUTPUT_STREAM, "!=\n");
-                break;
             case LPAREN:
-                fprintf(OUTPUT_STREAM, "(\n");
-                break;
             case RPAREN:
-                fprintf(OUTPUT_STREAM, ")\n");
-                break;
             case SEMI:
-                fprintf(OUTPUT_STREAM, ";\n");
-                break;
             case COMMA:
-                fprintf(OUTPUT_STREAM, ",\n");
-                break;
             case PLUS:
-                fprintf(OUTPUT_STREAM, "+\n");
-                break;
             case MINUS:
-                fprintf(OUTPUT_STREAM, "-\n");
-                break;
             case TIMES:
-                fprintf(OUTPUT_STREAM, "*\n");
-                break;
             case OVER:
-                fprintf(OUTPUT_STREAM, "/\n");
-                break;
             case END_FILE:
-                fprintf(OUTPUT_STREAM, "EOF\n");
+                fprintf(OUTPUT_STREAM, "%s\n", representation.c_str());
                 break;
             case NUM:
-                /*
-                 * 虽然我们不将十进制,八进制,十六进制和浮点数分开,但是打印Token的时候可以显式输出这些信息.
-                 */
-                switch (Compiler::getNumType(tokenString)) {
+                switch (getNumType(*ptr)) {
                     case NUM_TYPE::DECIMAL:
                         numType = "DECIMAL";
                         break;
@@ -149,16 +202,16 @@ namespace Compiler {
                         numType = "DOUBLE";
                         break;
                 }
-                fprintf(OUTPUT_STREAM, "NUMBER, val=%s, type=%s\n", tokenString.c_str(), numType.c_str());
+                fprintf(OUTPUT_STREAM, "NUMBER, val=%s, type=%s\n", representation.c_str(), numType.c_str());
                 break;
             case ID:
-                fprintf(OUTPUT_STREAM, "ID, name=%s\n", tokenString.c_str());
+                fprintf(OUTPUT_STREAM, "ID, name=%s\n", representation.c_str());
                 break;
             case STR:
-                fprintf(OUTPUT_STREAM, "STR, val=%s\n", tokenString.c_str());
+                fprintf(OUTPUT_STREAM, "STR, val=%s\n", representation.c_str());
                 break;
             default:
-                fprintf(OUTPUT_STREAM, "Unknown token: %s\n", tokenString.c_str());
+                fprintf(OUTPUT_STREAM, "Unknown token: %s\n", representation.c_str());
                 break;
         }
     }

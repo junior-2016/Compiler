@@ -14,7 +14,7 @@ namespace Compiler::Scanner {
 
     struct TokenRet {
         TokenType tokenType;
-        std::shared_ptr<std::string> tokenString;
+        string_ptr tokenString;
     };
 
     TokenRet getToken();

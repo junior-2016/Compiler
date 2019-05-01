@@ -6,6 +6,7 @@
 #include "FileUtil.h"
 #include "Exception.h"
 #include "Scanner.h"
+#include "Parser.h"
 
 namespace Compiler {
     FILE *file = nullptr;
@@ -14,6 +15,8 @@ namespace Compiler {
         using namespace Compiler::Exception;
         using namespace Compiler::FileUtil;
         using namespace Compiler::Scanner;
+        using namespace Compiler::Parser;
+
         if (n < 2) {
             fprintf(stderr, "usage: %s <filename> <filename> ... <filename>\n", argv[0]);
             exit(1);
@@ -21,7 +24,11 @@ namespace Compiler {
         readFromFile(n - 1, argv + 1);
         for (auto &pair:files) {
             file = pair.second;
-            while (getToken().tokenType != END_FILE);
+            // while (getToken().tokenType != END_FILE);
+            node root = parse();
+            if (TRACE_PARSER) {
+                printTree(root);
+            }
             if (ExceptionHandle::getHandle().hasException()) {
                 std::cout << "Process File " << pair.first << " has exceptions:\n" <<
                           ExceptionHandle::getHandle();

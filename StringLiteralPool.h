@@ -22,13 +22,13 @@
 
 namespace Compiler {
     struct stringLiteralHash {
-        std::size_t operator()(const std::shared_ptr<std::string> &ptr) const {
+        std::size_t operator()(const string_ptr &ptr) const {
             return std::hash<std::string>()(*ptr);
         }
     };
 
     struct stringLiteralEqual {
-        bool operator()(const std::shared_ptr<std::string> &lhs, const std::shared_ptr<std::string> &rhs) const {
+        bool operator()(const string_ptr &lhs, const string_ptr &rhs) const {
             return *lhs == *rhs;
         }
     };
@@ -38,8 +38,7 @@ namespace Compiler {
     private:
         StringLiteralPool() = default;
 
-        typedef std::unordered_set<std::shared_ptr<std::string>,
-                stringLiteralHash, stringLiteralEqual> StringLiteralSet;
+        typedef std::unordered_set<string_ptr, stringLiteralHash, stringLiteralEqual> StringLiteralSet;
 
         StringLiteralSet set;
 
@@ -54,8 +53,8 @@ namespace Compiler {
 
         void operator=(StringLiteralPool const &) = delete;
 
-        std::shared_ptr<std::string> getLiteralString(const std::string &string) {
-            auto ptr = std::make_shared<std::string>(string);
+        string_ptr getLiteralString(const std::string &string) {
+            auto ptr = make_string_ptr(string);
             StringLiteralSet::iterator pos;
             if ((pos = set.find(ptr)) == set.end()) {
                 return *set.insert(ptr).first;

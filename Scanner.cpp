@@ -29,7 +29,7 @@ namespace Compiler::Scanner {
          *   实际处理负号(-)或者正号(+)是通过解析为运算符解决,但是运算符只能处理 NUM (+/- NUM)* 的情况, 如果是单独一个 (+/-)NUM
          *   就不行了. 这里考虑的解决方案是: 给正负运算规则加上 (+/-)NUM 的规则,在语义分析里,这个规则的语义是: 0 (+/-) NUM.
          */
-        IN_DECIMAL,  // 十进制
+                IN_DECIMAL,  // 十进制
         IN_OCT,     // 八进制
         IN_HEX,     // 十六进制
         IN_FLOAT,   // 浮点数值常量,包括双精度浮点常量和单精度浮点常量(最后带一个f或者F)
@@ -317,18 +317,17 @@ namespace Compiler::Scanner {
                 }
             }
         }
-        if (TRACE_SCANNER) {
-            fprintf(OUTPUT_STREAM, "\t%d ", lineNumber);
-            printToken(currentToken, tokenString);
-        }
-
-        std::shared_ptr<std::string> ptr;
+        string_ptr ptr;
         if (currentToken == STR) {
             ptr = StringLiteralPool::getInstance().getLiteralString(tokenString);
-        } else if (currentToken == ID || currentToken == NUM) {
-            ptr = std::make_shared<std::string>(tokenString);
-        } else { // 其他类型的Token,比如关键字,特殊符号,END_FILE,ERROR等等,都不需要一个TokenString.
+        } else if (currentToken == ID || currentToken == NUM || currentToken == ERROR) {
+            ptr = make_string_ptr(tokenString);
+        } else { // 其他类型的Token,比如关键字,特殊符号,END_FILE,都不需要一个TokenString.
             ptr = nullptr;
+        }
+        if (TRACE_SCANNER) {
+            fprintf(OUTPUT_STREAM, "\t%d ", lineNumber);
+            printToken(currentToken, ptr);
         }
         return {currentToken, ptr};
     }

@@ -6,7 +6,6 @@
 #include "Scanner.h"
 #include "Exception.h"
 #include "StringLiteralPool.h"
-#include "Util.h"
 
 namespace Compiler::Parser {
     /* parse tree node */
@@ -44,20 +43,17 @@ namespace Compiler::Parser {
 
     Scanner::TokenRet token;
 
-    inline void syntax_error_report() {
-        using namespace Compiler::Exception;
-        ExceptionHandle::getHandle().add_exception(
-                ExceptionType::SYNTAX_ERROR,
-                std::string("Not match token ")
-                + *token.tokenString
-                + std::string(" on line:")
-                + std::to_string(Scanner::lineNumber));
-    }
-
     inline auto match(TokenType target) {
+        using namespace Compiler::Exception;
         if (token.tokenType == target) token = Scanner::getToken();
         else {
-            syntax_error_report();
+            std::string message = "match() unexpected token ["
+                                  + getTokenRepresentation(token.tokenType, token.tokenString)
+                                  + "], expected token ["
+                                  + getTokenRepresentation(target, nullptr)
+                                  + "] on line:"
+                                  + std::to_string(Scanner::lineNumber);
+            ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
         }
     }
 
@@ -282,8 +278,12 @@ namespace Compiler::Parser {
                 match(TokenType::RPAREN);
                 break;
             default:
-                syntax_error_report();
-                token = Scanner::getToken();
+                using namespace Compiler::Exception;
+                std::string message = "arithmetic_factor() unexpected token ["
+                                      + getTokenRepresentation(token.tokenType, token.tokenString)
+                                      + "] on line:" + std::to_string(Scanner::lineNumber);
+                ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
+                // token = Scanner::getToken(); // TODO: 不清楚这里是否需要前进一个Token
                 break;
         }
         return n;
@@ -324,8 +324,12 @@ namespace Compiler::Parser {
                 match(TokenType::SEMI);
                 break;
             default:
-                syntax_error_report();
-                token = Scanner::getToken();
+                using namespace Compiler::Exception;
+                std::string message = "statement() unexpected token ["
+                                      + getTokenRepresentation(token.tokenType, token.tokenString)
+                                      + "] on line:" + std::to_string(Scanner::lineNumber);
+                ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
+                // token = Scanner::getToken(); // TODO: 不清楚这里是否需要前进一个Token
                 break;
         }
         return n;
@@ -408,7 +412,62 @@ namespace Compiler::Parser {
         return n;
     }
 
-    void printTree(node n) {
+    int tab = 0;
 
+    void printTree(node n) {
+        tab++;
+        while (n != nullptr) {
+            for (int i = 0; i < tab; i++) {
+                fprintf(OUTPUT_STREAM, "\t");
+            }
+            if (n->nodeKind == NodeKind::StmtK) {
+                switch (std::get<StmtKind>(n->kind)) {
+                    case StmtKind::IfK:
+                        fprintf(OUTPUT_STREAM, "If\n");
+                        break;
+                    case StmtKind::RepeatK:
+                        fprintf(OUTPUT_STREAM, "Repeat\n");
+                        break;
+                    case StmtKind::AssignK:
+                        fprintf(OUTPUT_STREAM, "Assign to : %s\n", std::get<string_ptr>(n->attribute)->c_str());
+                        break;
+                    case StmtKind::ReadK:
+                        fprintf(OUTPUT_STREAM, "Read : %s\n", std::get<string_ptr>(n->attribute)->c_str());
+                        break;
+                    case StmtKind::WriteK:
+                        fprintf(OUTPUT_STREAM, "Write\n");
+                        break;
+                    case StmtKind::WhileK:
+                        fprintf(OUTPUT_STREAM, "Do\n");
+                        break;
+                }
+            } else if (n->nodeKind == NodeKind::ExpK) {
+                switch (std::get<ExpKind>(n->kind)) {
+                    case ExpKind::OpK:
+                        fprintf(OUTPUT_STREAM, "Op: %s\n",
+                                getTokenRepresentation(std::get<TokenType>(n->attribute), nullptr).c_str());
+                        break;
+                    case ExpKind::ConstIntK:
+                        fprintf(OUTPUT_STREAM, "ConstInt: %d\n", std::get<int>(n->attribute));
+                        break;
+                    case ExpKind::ConstFloatK:
+                        fprintf(OUTPUT_STREAM, "ConstFloat: %f\n", std::get<float>(n->attribute));
+                        break;
+                    case ExpKind::ConstDoubleK:
+                        fprintf(OUTPUT_STREAM, "ConstDouble: %f\n", std::get<double>(n->attribute));
+                        break;
+                    case ExpKind::IdK:
+                        fprintf(OUTPUT_STREAM, "Id: %s\n", std::get<string_ptr>(n->attribute)->c_str());
+                        break;
+                }
+            } else {
+                fprintf(OUTPUT_STREAM, "Unknown kind of tree node.\n");
+            }
+            for (auto &child:n->childs) {
+                printTree(child);
+            }
+            n = n->sibling;
+        }
+        tab--;
     }
 }

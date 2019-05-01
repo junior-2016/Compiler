@@ -5,23 +5,25 @@
 #ifndef SCANNER_SYMBOLTABLE_H
 #define SCANNER_SYMBOLTABLE_H
 
+#include "Compiler.h"
 #include "Token.h"
 
+namespace Compiler {
 // 符号结构体
 // 注意:符号Symbol就是ID(标识符)类型的Token,所以这里不需要单独储存其Token类型
-struct Symbol {
-    std::shared_ptr<std::string> name; // 标识符名称.
+    struct Symbol {
+        string_ptr name; // 标识符名称.
 
-    /**
-     TODO:
-     add other attribute information :
-     such as Constants, variables, functions, parameters, types, fields, etc
-    */
-    struct Attribute {
-        int line_no;
-        int line_loc;
-    } attribute;
-};
+        /**
+         TODO:
+         add other attribute information :
+         such as Constants, variables, functions, parameters, types, fields, etc
+        */
+        struct Attribute {
+            int line_no;
+            int line_loc;
+        } attribute;
+    };
 
 // 符号表实现用哈希表.
 // 注意符号表只管理与标识符(ID型Token)有关的信息.
@@ -34,18 +36,18 @@ struct Symbol {
  符号在不同的作用域里重新定义了,需要添加新的符号信息或者更新原来符号的属性信息.
  符号在同一作用域使用了,需要更新符号的属性信息等等...
 */
-const size_t TableSize = 1021; // 必须用素数作为桶的大小.
-class SymbolTable {
-private:
-    size_t count = 0;
-    Symbol table[TableSize];
-public:
-    SymbolTable() {
+    const size_t TableSize = 1021; // 必须用素数作为桶的大小.
+    class SymbolTable {
+    private:
+        size_t count = 0;
+        Symbol table[TableSize];
+    public:
+        SymbolTable() {
 
-    }
-};
+        }
+    };
 
 // 符号表需要同时被词法/语法/语义分析使用,所以用全局变量
-SymbolTable table;
-
+    SymbolTable table;
+}
 #endif //SCANNER_SYMBOLTABLE_H
