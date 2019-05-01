@@ -289,6 +289,13 @@ namespace Compiler::Parser {
         return n;
     }
 
+    /**
+     * version_1:
+     * statement => if_else_stat | repeat_until_stat | do_while_stat | assign_stat | read_stat | write_stat
+     *
+     * version_2:
+     * statement => if_else_stat | repeat_until_stat; | do_while_stat; | assign_stat; | read_stat; | write_stat;
+     */
     node statement() {
         using namespace Compiler::Exception;
         node n = nullptr;
@@ -298,18 +305,23 @@ namespace Compiler::Parser {
                 break;
             case TokenType::REPEAT:
                 n = repeat_until_statement();
+                match(TokenType::SEMI);
                 break;
             case TokenType::DO:
                 n = do_while_statement();
+                match(TokenType::SEMI);
                 break;
             case TokenType::ID:
                 n = assign_statement();
+                match(TokenType::SEMI);
                 break;
             case TokenType::READ:
                 n = read_statement();
+                match(TokenType::SEMI);
                 break;
             case TokenType::WRITE:
                 n = write_statement();
+                match(TokenType::SEMI);
                 break;
             default:
                 syntax_error_report();
@@ -320,17 +332,37 @@ namespace Compiler::Parser {
     }
 
     /**
+     * version_1:
      * statement_sequence -> statement { ; statement }*
      * 解析时
-     *          statement_sequence
-     *                  |
-     *        stat ; stat ; stat; stat; ...
+     *                statement_sequence
+     *                       |
+     *        stat ; stat ; stat; stat; ... ; stat (statement_sequence最后一个stat不需要分号)
+     *
+     * version_2 (为了让文法更接近C语言文法,第二个版本设计为: 除了if_else_statement,每一个statement后面都必须加一个分号.
+     * 实现这一点需要将分号的match放在statement()函数里处理):
+     * statement_sequence => { statement }+
+     * statement => if_else_statement | other_statement ;
+     *
+     * 注意statement_sequence会被用在
+     * program => statement_sequence [END_FILE]
+     * if_else_statement => if expr then statement_sequence [else] statement_sequence [end]
+     * do_while_statement => do statement_sequence [while] expr
+     * repeat_until_statement => repeat statement_sequence [until] expr
+     * 上面所有 statement_sequence 结束后紧接着出现的token有: END_FILE , else , end , while , until 几种类型,
+     * 因此 statement_sequence()函数 在实现时要以这几种token作为退出循环的条件.
+     *
+     *
      */
     node statement_sequence() {
         node n = statement();
         node p = n;
-        while (token.tokenType == SEMI) {
-            match(TokenType::SEMI);
+        while (token.tokenType != TokenType::END_FILE &&
+               token.tokenType != TokenType::ELSE &&
+               token.tokenType != TokenType::END &&
+               token.tokenType != TokenType::UNTIL &&
+               token.tokenType != TokenType::WHILE) {
+            // match(TokenType::SEMI); // version_1
             node q = statement();
             if (q != nullptr) {
                 if (n == nullptr) {
@@ -346,7 +378,7 @@ namespace Compiler::Parser {
     }
 
     /**
-     * program -> stmt_sequence
+     * program -> statement_sequence [END_FILE]
      */
     node parse() {
         using namespace Compiler::Exception;
