@@ -60,6 +60,6 @@ namespace Compiler::Parser {
 
     node parse();
 
-    void printTree(node n);
+    void printTree(node n,int tab_count=0);
 }
 #endif //SCANNER_PARSER_H

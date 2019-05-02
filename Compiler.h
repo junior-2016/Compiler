@@ -5,17 +5,23 @@
 #ifndef SCANNER_COMPILER_H
 #define SCANNER_COMPILER_H
 
-// global include(不要包含Util.h, Util.h需要用的时候再包含, 否则Util.h里面定义的一些类型别名可能报错)
+// standard library include
 #include <algorithm>
 #include <cinttypes>
+#include <cstdint>
 #include <variant>
 #include <any>
 #include <cmath>
 #include <iostream>
+#include <iomanip>
 #include <limits>
 #include <memory>
 #include <string>
 #include <vector>
+#include <list>
+#include <stack>
+#include <queue>
+#include <deque>
 #include <set>
 #include <unordered_set>
 #include <map>
@@ -24,6 +30,11 @@
 #include <cstdio>
 #include <cstring>
 #include <cassert>
+
+// boost include
+#include <boost/format.hpp>
+
+// user include(不要包含Util.h, Util.h需要用的时候再包含, 否则Util.h里面定义的一些类型别名可能报错)
 #include "config.h"
 
 namespace Compiler {

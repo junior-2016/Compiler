@@ -1,3 +1,7 @@
+#include <utility>
+
+#include <utility>
+
 //
 // Created by junior on 19-4-5.
 //
@@ -6,48 +10,80 @@
 #define SCANNER_SYMBOLTABLE_H
 
 #include "Compiler.h"
-#include "Token.h"
+#include "Util.h"
 
 namespace Compiler {
-// 符号结构体
-// 注意:符号Symbol就是ID(标识符)类型的Token,所以这里不需要单独储存其Token类型
-    struct Symbol {
-        string_ptr name; // 标识符名称.
+    /**
+     * 1. 储存一个变量的内存地址用什么类型? 参考:
+     * https://stackoverflow.com/questions/13235280/how-to-store-a-memory-address-in-an-integer
+     * 2. 哈希集set<entry>用entry的symbol_name作为key来插入和查找, 但是找到一个存在的entry时,有时候需要更新它的symbol_appear_lines.
+     * 如果使用set.find(entry)就无法实现这种更新,因为set.find(entry)返回的是const iterator,无法修改内部成员.
+     * C++设计的思路是不能破坏哈希集合内部的元素,因为哈希集的元素可能参与到hash()值的计算中,为了安全干脆一刀切.
+     * 要解决这一点,有三种方法:
+     * 1. 查找到一个元素后,将这个元素拷贝一份,修改这个拷贝,然后将原来的元素删除,再将拷贝插入哈希集合,这种开销太大;
+     * 2. 将原来的哈希集合拆解变成哈希表,即 map<key,value>,然后将symbol_appear_lines,memory_address这些存在value里,这是比较好的重构思路.
+     * 3. 在原来SymbolEntry结构体的 symbol_appear_lines　前加上 mutable(可变) 关键字, C++允许对const对象的mutable成员进行修改.
+     * 这个方法可以不破坏原来的代码,而且明确了Entry的哪些元素可以修改
+     * (这里只给symbol_appear_lines加上mutable,内存地址我认为第一次分配后就不需要改变了).
+     * 参考: https://stackoverflow.com/questions/18704129/unordered-set-non-const-iterator
+     */
+    struct SymbolEntry {
+        explicit SymbolEntry(string_ptr name) : symbol_name(std::move(name)) {}
 
-        /**
-         TODO:
-         add other attribute information :
-         such as Constants, variables, functions, parameters, types, fields, etc
-        */
-        struct Attribute {
-            int line_no;
-            int line_loc;
-        } attribute;
+        string_ptr symbol_name = nullptr;                 // 符号名称
+        uintptr_t memory_address = 0;                     // 内存地址
+        mutable std::list<int> symbol_appear_lines;       // 符号出现过的行号列表(可变)
+        // struct typeinfo;                               // 类型信息
     };
 
-// 符号表实现用哈希表.
-// 注意符号表只管理与标识符(ID型Token)有关的信息.
-// 符号表需要在语法分析(parse)结束,得到AST后才能建立.
-/**
- TODO:
- 符号表在插入符号时如果发现符号(即标识符)名称一样,有几步需要处理:
- 首先是判断此时符号在什么作用域,是在执行哪种行为(声明定义还是使用,注意利用后面的语法分析我们可以强制声明后必须定义),
- 然后才能根据这些信息,判断可能是: 符号在同一个作用域重复定义了,需要提交异常(ID_REPEAT 异常);
- 符号在不同的作用域里重新定义了,需要添加新的符号信息或者更新原来符号的属性信息.
- 符号在同一作用域使用了,需要更新符号的属性信息等等...
-*/
-    const size_t TableSize = 1021; // 必须用素数作为桶的大小.
     class SymbolTable {
     private:
-        size_t count = 0;
-        Symbol table[TableSize];
-    public:
-        SymbolTable() {
+        struct SymbolEntryHash {
+            std::size_t operator()(const SymbolEntry &entry) const {
+                return std::hash<std::string>()(*entry.symbol_name);
+            }
+        };
 
+        struct SymbolEqual {
+            bool operator()(const SymbolEntry &a, const SymbolEntry &b) const {
+                return *(a.symbol_name) == *(b.symbol_name);
+            }
+        };
+
+    private:
+        typedef std::unordered_set<SymbolEntry, SymbolEntryHash, SymbolEqual> symbol_table_t;
+        symbol_table_t table;
+
+    public:
+        SymbolTable() = default;
+
+        void insert(const string_ptr &name, int lineNumber, uintptr_t memory_address) {
+            SymbolEntry search(name);
+            symbol_table_t::iterator pos;
+            if ((pos = table.find(search)) == table.end()) {
+                search.memory_address = memory_address;
+                search.symbol_appear_lines.push_back(lineNumber);
+                table.insert(search);
+            } else {
+                (*pos).symbol_appear_lines.push_back(lineNumber);
+            }
+        }
+
+
+
+        friend std::ostream &operator<<(std::ostream &out, const SymbolTable &symbolTable) {
+            out << "Variable_Name" << std::setw(20) << "Memory_Address"
+                << std::setw(28) << "Appear_Line_Number" << "\n";
+            for (auto &entry:symbolTable.table) {
+                out << boost::format("%-20s 0x%08x %-12s") % *entry.symbol_name % entry.memory_address % "";
+                for (auto &line:entry.symbol_appear_lines) {
+                    out << boost::format("%-8d") % line;
+                }
+                out << "\n";
+            }
+            return out;
         }
     };
-
-// 符号表需要同时被词法/语法/语义分析使用,所以用全局变量
-    SymbolTable table;
 }
+
 #endif //SCANNER_SYMBOLTABLE_H

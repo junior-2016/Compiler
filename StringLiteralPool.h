@@ -21,20 +21,20 @@
 #include "Compiler.h"
 
 namespace Compiler {
-    struct stringLiteralHash {
-        std::size_t operator()(const string_ptr &ptr) const {
-            return std::hash<std::string>()(*ptr);
-        }
-    };
-
-    struct stringLiteralEqual {
-        bool operator()(const string_ptr &lhs, const string_ptr &rhs) const {
-            return *lhs == *rhs;
-        }
-    };
-
-
     class StringLiteralPool {
+    private:
+        struct stringLiteralHash {
+            std::size_t operator()(const string_ptr &ptr) const {
+                return std::hash<std::string>()(*ptr);
+            }
+        };
+
+        struct stringLiteralEqual {
+            bool operator()(const string_ptr &lhs, const string_ptr &rhs) const {
+                return *lhs == *rhs;
+            }
+        };
+
     private:
         StringLiteralPool() = default;
 

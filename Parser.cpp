@@ -43,7 +43,7 @@ namespace Compiler::Parser {
 
     Scanner::TokenRet token;
 
-    inline auto match(TokenType target) {
+    inline void match(TokenType target) {
         using namespace Compiler::Exception;
         if (token.tokenType == target) token = Scanner::getToken();
         else {
@@ -355,8 +355,6 @@ namespace Compiler::Parser {
      * repeat_until_statement => repeat statement_sequence [until] expr
      * 上面所有 statement_sequence 结束后紧接着出现的token有: END_FILE , else , end , while , until 几种类型,
      * 因此 statement_sequence()函数 在实现时要以这几种token作为退出循环的条件.
-     *
-     *
      */
     node statement_sequence() {
         node n = statement();
@@ -412,12 +410,9 @@ namespace Compiler::Parser {
         return n;
     }
 
-    int tab = 0;
-
-    void printTree(node n) {
-        tab++;
+    void printTree(node n, int tab_count) {
         while (n != nullptr) {
-            for (int i = 0; i < tab; i++) {
+            for (int i = 0; i < tab_count; i++) {
                 fprintf(OUTPUT_STREAM, "\t");
             }
             if (n->nodeKind == NodeKind::StmtK) {
@@ -464,10 +459,9 @@ namespace Compiler::Parser {
                 fprintf(OUTPUT_STREAM, "Unknown kind of tree node.\n");
             }
             for (auto &child:n->childs) {
-                printTree(child);
+                printTree(child, tab_count + 1);
             }
             n = n->sibling;
         }
-        tab--;
     }
 }
