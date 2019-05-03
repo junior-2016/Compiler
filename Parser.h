@@ -38,9 +38,9 @@ namespace Compiler::Parser {
         Void, Integer, Boolean, String, Float, Double
     };
 
-    using node = struct TreeNode *;
+    using node = std::shared_ptr<struct TreeNode>;
     struct TreeNode {
-        std::vector<node> childs;
+        std::vector<node> children;
         node sibling = nullptr;
         int lineNumber = 0;
 

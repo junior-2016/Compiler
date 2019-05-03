@@ -28,7 +28,12 @@ namespace Compiler {
 
         INT, BOOL, FLOAT, DOUBLE, STRING,
         // 基本类型,注意这里的STRING代表字符串类型,用string关键字表示,与后面的STR字符串常量Token不一样
-
+        // 基本类型赋值规则(后面语义检查用到):
+        // int: 范围从-2^31到2^31-1, 允许8/10/16进制赋值;
+        // bool: 仅true,false两个取值
+        // float: 32位单精度浮点数
+        // double: 64位双精度浮点数
+        // string: 字符串,通过两个单引号''标出,不提供char类型,可以通过声明单个字符的字符串来充当char.
 
         /* 标识符　*/
                 ID,

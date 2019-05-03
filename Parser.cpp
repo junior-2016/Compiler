@@ -87,12 +87,12 @@ namespace Compiler::Parser {
     node if_else_statement() {
         node n = newStatementNode(StmtKind::IfK);
         match(TokenType::IF);
-        if (n != nullptr) n->childs.push_back(expression());
+        if (n != nullptr) n->children.push_back(expression());
         match(TokenType::THEN);
-        if (n != nullptr) n->childs.push_back(statement_sequence());
+        if (n != nullptr) n->children.push_back(statement_sequence());
         if (token.tokenType == TokenType::ELSE) { // 这里必须写成 if(token_type is ELSE){ match (ELSE); ...},代表一种可选的推导分支
             match(TokenType::ELSE);
-            if (n != nullptr) n->childs.push_back(statement_sequence());
+            if (n != nullptr) n->children.push_back(statement_sequence());
         }
         match(TokenType::END);
         return n;
@@ -108,7 +108,7 @@ namespace Compiler::Parser {
         }
         match(TokenType::ID);
         match(TokenType::ASSIGN);
-        if (n != nullptr) n->childs.push_back(expression());
+        if (n != nullptr) n->children.push_back(expression());
         return n;
     }
 
@@ -118,9 +118,9 @@ namespace Compiler::Parser {
     node do_while_statement() {
         node n = newStatementNode(StmtKind::WhileK);
         match(TokenType::DO);
-        if (n != nullptr) n->childs.push_back(statement_sequence());
+        if (n != nullptr) n->children.push_back(statement_sequence());
         match(TokenType::WHILE);
-        if (n != nullptr) n->childs.push_back(expression());
+        if (n != nullptr) n->children.push_back(expression());
         return n;
     }
 
@@ -130,9 +130,9 @@ namespace Compiler::Parser {
     node repeat_until_statement() {
         node n = newStatementNode(StmtKind::RepeatK);
         match(TokenType::REPEAT);
-        if (n != nullptr) n->childs.push_back(statement_sequence());
+        if (n != nullptr) n->children.push_back(statement_sequence());
         match(TokenType::UNTIL);
-        if (n != nullptr) n->childs.push_back(expression());
+        if (n != nullptr) n->children.push_back(expression());
         return n;
     }
 
@@ -155,14 +155,13 @@ namespace Compiler::Parser {
     node write_statement() {
         node n = newStatementNode(StmtKind::WriteK);
         match(TokenType::WRITE);
-        if (n != nullptr) n->childs.push_back(expression());
+        if (n != nullptr) n->children.push_back(expression());
         return n;
     }
 
     // TODO: 引入function的文法
     node function_statement() {
-        node n = new TreeNode;
-
+        node n = nullptr;
         return n;
     }
 
@@ -179,13 +178,13 @@ namespace Compiler::Parser {
             || token.tokenType == TokenType::BE) {
             node p = newExpressionNode(ExpKind::OpK);
             if (p != nullptr) {
-                p->childs.push_back(n);
+                p->children.push_back(n);
                 p->attribute = token.tokenType;
                 n = p;
             }
             match(token.tokenType); // 这里的match必成功
             if (n != nullptr) {
-                n->childs.push_back(arithmetic_expression());
+                n->children.push_back(arithmetic_expression());
             }
         }
         return n;
@@ -204,10 +203,10 @@ namespace Compiler::Parser {
             node p = newExpressionNode(ExpKind::OpK);
             if (p != nullptr) {
                 p->attribute = token.tokenType;
-                p->childs.push_back(n);
+                p->children.push_back(n);
                 n = p;
                 match(token.tokenType);
-                n->childs.push_back(arithmetic_term());
+                n->children.push_back(arithmetic_term());
             }
         }
         return n;
@@ -226,10 +225,10 @@ namespace Compiler::Parser {
             node p = newExpressionNode(ExpKind::OpK);
             if (p != nullptr) {
                 p->attribute = token.tokenType;
-                p->childs.push_back(n);
+                p->children.push_back(n);
                 n = p;
                 match(token.tokenType);
-                n->childs.push_back(arithmetic_factor());
+                n->children.push_back(arithmetic_factor());
             }
         }
         return n;
@@ -394,7 +393,7 @@ namespace Compiler::Parser {
     }
 
     node newStatementNode(StmtKind stmtKind) {
-        node n = new TreeNode;
+        node n = std::make_shared<TreeNode>();
         n->lineNumber = Scanner::lineNumber;
         n->nodeKind = NodeKind::StmtK;
         n->kind = stmtKind;
@@ -402,7 +401,7 @@ namespace Compiler::Parser {
     }
 
     node newExpressionNode(ExpKind expKind) {
-        node n = new TreeNode;
+        node n = std::make_shared<TreeNode>();
         n->lineNumber = Scanner::lineNumber;
         n->nodeKind = NodeKind::ExpK;
         n->kind = expKind;
@@ -458,7 +457,7 @@ namespace Compiler::Parser {
             } else {
                 fprintf(OUTPUT_STREAM, "Unknown kind of tree node.\n");
             }
-            for (auto &child:n->childs) {
+            for (auto &child:n->children) {
                 printTree(child, tab_count + 1);
             }
             n = n->sibling;
