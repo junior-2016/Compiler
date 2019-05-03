@@ -44,7 +44,7 @@ namespace Compiler {
         /* 特殊符号 */
                 ASSIGN,  // :=
         EQ, LT, BT, LE, BE, NE,  // = < > <= >= !=
-        PLUS, MINUS, TIMES, OVER, // + - * /
+        PLUS, MINUS, TIMES, OVER, MOD,  // + - * / %
         LPAREN, RPAREN,  // ( )
         SEMI, // 分号
         COMMA, // 逗号

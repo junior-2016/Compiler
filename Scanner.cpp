@@ -141,6 +141,9 @@ namespace Compiler::Scanner {
                             case '/':
                                 currentToken = OVER;
                                 break;
+                            case '%':
+                                currentToken = MOD;
+                                break;
                             case '(':
                                 currentToken = LPAREN;
                                 break;

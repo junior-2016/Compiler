@@ -19,23 +19,28 @@
  */
 namespace Compiler::Parser {
     /* 语法分析树节点类型 */
-    enum class NodeKind {
+    enum class StmtOrExp {
         StmtK, ExpK
     };
 
     /* statement type 分类 */
     enum class StmtKind {
-        IfK, RepeatK, AssignK, ReadK, WriteK, WhileK
+        IfK, RepeatK, AssignK, ReadK, WriteK, WhileK, DeclarationK
     };
 
     /* expression type 分类 */
     enum class ExpKind {
-        OpK, ConstIntK, ConstFloatK, ConstDoubleK, IdK
+        OpK, ConstIntK, ConstFloatK, ConstDoubleK, ConstStringK, ConstBoolK, IdK
     };
 
     /* 用于类型检查 */
     enum class ExpType {
         Void, Integer, Boolean, String, Float, Double
+    };
+
+    // 为了限制bool类型取值,建立一个BOOL enum,取代C语言的bool
+    enum class BOOL {
+        TRUE = true, FALSE = false
     };
 
     using node = std::shared_ptr<struct TreeNode>;
@@ -44,9 +49,10 @@ namespace Compiler::Parser {
         node sibling = nullptr;
         int lineNumber = 0;
 
-        // select nodeKind => select kind => if expKind select exp type.
-        NodeKind nodeKind;
+        // select stmt_or_exp => select kind => if expKind select exp type.
+        StmtOrExp stmt_or_exp;
         std::variant<StmtKind, ExpKind> kind;
+
         ExpType expType; // for expression type checking
 
         std::variant<
@@ -54,12 +60,13 @@ namespace Compiler::Parser {
                 int,       /* 解析整型常量(10/16/8进制)的字符串为int类型的值,储存在节点属性值里 */
                 float,     /* 解析单精度浮点常量(f/F结尾)的字符串为float类型的值,储存在节点属性值里 */
                 double,    /* 解析双精度浮点常量的字符串为double类型的值,储存在节点属性值里 */
-                string_ptr /* ID型Token的名称 */
+                BOOL,      /* 解析bool类型的值,只有true,false两种取值 */
+                string_ptr /* ID型Token的名称 或者 字符串常量 => 通过kind区分 */
         > attribute; // 节点属性
     };
 
     node parse();
 
-    void printTree(node n,int tab_count=0);
+    void printTree(node n, int tab_count = 0);
 }
 #endif //SCANNER_PARSER_H

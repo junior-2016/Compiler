@@ -22,6 +22,8 @@ namespace Compiler::Parser {
 
     node assign_statement();
 
+    node declaration_statement();
+
     node do_while_statement();
 
     node repeat_until_statement();
@@ -30,16 +32,22 @@ namespace Compiler::Parser {
 
     node write_statement();
 
-    node function_statement();
-
     /* expression */
     node expression();
 
-    node arithmetic_expression();
+    node logical_or_expression();
 
-    node arithmetic_term();
+    node logical_and_expression();
 
-    node arithmetic_factor();
+    node equality_expression();
+
+    node relational_expression();
+
+    node arithmetic_additive_expression();
+
+    node arithmetic_multiplicative_expression();
+
+    node factor_expression();
 
     Scanner::TokenRet token;
 
@@ -99,7 +107,22 @@ namespace Compiler::Parser {
     }
 
     /**
-     * assign_statement => ID := expression
+     * declaration_statement => Type ID := expression (对变量声明并且完成定义,不允许无初始化定义的声明)
+     */
+    node declaration_statement() {
+        node n = newStatementNode(StmtKind::DeclarationK);
+        if (n != nullptr) {
+            n->attribute = token.tokenType;//这里要求当前token已经判定为INT/DOUBLE/FLOAT/BOOL/STRING
+        }
+        match(token.tokenType); // 必定命中
+        if (token.tokenType == TokenType::ID) {
+            n->children.push_back(assign_statement());
+        }
+        return n;
+    }
+
+    /**
+     * assign_statement => ID := expression (赋值语句,对变量ID赋值之前必须先存在声明)
      */
     node assign_statement() {
         node n = newStatementNode(StmtKind::AssignK);
@@ -159,88 +182,97 @@ namespace Compiler::Parser {
         return n;
     }
 
-    // TODO: 引入function的文法
-    node function_statement() {
-        node n = nullptr;
+    /**
+     * 为了简化代码量,写了个通用的expression parser模板,适应如下文法:
+     *  Expression => next_expression { [tokenList] next_expression }*
+     *  解析后的parser tree 举例如下:
+     * eg: 其中 op is in [tokenList]
+     *                 op => return
+     *           op         next_expr (后执行)
+     * next_expr    next_expr (先执行)
+     */
+    node expression_template(const std::function<node()> &nextExpression, std::initializer_list<TokenType> tokenList) {
+        node n = nextExpression();
+        while (std::find(tokenList.begin(), tokenList.end(), token.tokenType) != tokenList.end()) {
+            node p = newExpressionNode(ExpKind::OpK);
+            if (p != nullptr) {
+                p->attribute = token.tokenType;
+                p->children.push_back(n);
+                n = p;
+                match(token.tokenType);
+                n->children.push_back(nextExpression());
+            }
+        }
         return n;
     }
 
     /**
-     * expression => expr { < | > | <= | >= | = | !=  expr }?
+     * expression => logical_or_expression
      */
     node expression() {
-        node n = arithmetic_expression();
-        if (token.tokenType == TokenType::LT
-            || token.tokenType == TokenType::BT
-            || token.tokenType == TokenType::EQ
-            || token.tokenType == TokenType::NE
-            || token.tokenType == TokenType::LE
-            || token.tokenType == TokenType::BE) {
-            node p = newExpressionNode(ExpKind::OpK);
-            if (p != nullptr) {
-                p->children.push_back(n);
-                p->attribute = token.tokenType;
-                n = p;
-            }
-            match(token.tokenType); // 这里的match必成功
-            if (n != nullptr) {
-                n->children.push_back(arithmetic_expression());
-            }
-        }
-        return n;
+        return logical_or_expression();
     }
 
     /**
-     * expr => term { +|- term }*
-     * eg:
-     *           -(op) => return
-     *     +(op)        term
-     * term    term
+     * logical_or_expression => logical_and_expression { or logical_and_expression }*
+
      */
-    node arithmetic_expression() {
-        node n = arithmetic_term();
-        while (token.tokenType == TokenType::PLUS || token.tokenType == TokenType::MINUS) {
-            node p = newExpressionNode(ExpKind::OpK);
-            if (p != nullptr) {
-                p->attribute = token.tokenType;
-                p->children.push_back(n);
-                n = p;
-                match(token.tokenType);
-                n->children.push_back(arithmetic_term());
-            }
-        }
-        return n;
+    node logical_or_expression() {
+        return expression_template(logical_and_expression, {TokenType::OR});
     }
 
     /**
-     * term => factor { *|/ factor }*
-     * eg:
-     *           /(op) => return
-     *     *(op)       factor
-     * factor  factor
+     * logical_and_expression => equality_expression { and equality_expression }*
      */
-    node arithmetic_term() {
-        node n = arithmetic_factor();
-        while (token.tokenType == TokenType::TIMES || token.tokenType == TokenType::OVER) {
-            node p = newExpressionNode(ExpKind::OpK);
-            if (p != nullptr) {
-                p->attribute = token.tokenType;
-                p->children.push_back(n);
-                n = p;
-                match(token.tokenType);
-                n->children.push_back(arithmetic_factor());
-            }
-        }
-        return n;
+    node logical_and_expression() {
+        return expression_template(equality_expression, {TokenType::AND});
     }
 
     /**
-     * factor => ID | NUM | ( expression )
+     * equality_expression => relational_expression { = | !=  relational_expression}*
      */
-    node arithmetic_factor() {
+    node equality_expression() {
+        return expression_template(relational_expression, {TokenType::EQ, TokenType::NE});
+    }
+
+    /**
+     * relational_expression => additive_expression { > | < | >= | <=  additive_expression } *
+     */
+    node relational_expression() {
+        return expression_template(arithmetic_additive_expression,
+                                   {TokenType::LT, TokenType::LE, TokenType::BT, TokenType::BE});
+    }
+
+    /**
+     * additive_expression => multiplicative_expression { +|- multiplicative_expression }*
+     */
+    node arithmetic_additive_expression() {
+        return expression_template(arithmetic_multiplicative_expression, {TokenType::PLUS, TokenType::MINUS});
+    }
+
+    /**
+     *  multiplicative_expression => factor_expression { * | / | % factor_expression }*
+     */
+    node arithmetic_multiplicative_expression() {
+        return expression_template(factor_expression, {TokenType::TIMES, TokenType::OVER, TokenType::MOD});
+    }
+
+    /**
+     * factor_expression => not factor_expression | ID | NUM | STR | BOOL | ( expression )
+     * 注意到: STR 不能参与到 arithmetic 或者 logical 运算中,只能在 assignment/declaration/write expression 这些出现.
+     */
+    node factor_expression() {
         node n = nullptr;
         switch (token.tokenType) {
-            case NUM:
+            case TokenType::NOT:
+                n = newExpressionNode(ExpKind::OpK);
+                if (n != nullptr) {
+                    n->attribute = token.tokenType;
+                    match(TokenType::NOT);
+                    n->children.push_back(factor_expression());
+                }
+                break;
+            case TokenType::NUM:
                 try {
                     switch (getNumType(*token.tokenString)) {
                         case NUM_TYPE::DECIMAL:
@@ -264,16 +296,31 @@ namespace Compiler::Parser {
                 }
                 match(TokenType::NUM);
                 break;
-            case ID:
+            case TokenType::TRUE:
+            case TokenType::FALSE:
+                n = newExpressionNode(ExpKind::ConstBoolK);
+                if (n != nullptr) {
+                    n->attribute = (token.tokenType == TokenType::TRUE) ? BOOL::TRUE : BOOL::FALSE;
+                }
+                match(token.tokenType);
+                break;
+            case TokenType::STR:
+                n = newExpressionNode(ExpKind::ConstStringK);
+                if (n != nullptr) {
+                    n->attribute = token.tokenString;
+                }
+                match(TokenType::STR);
+                break;
+            case TokenType::ID:
                 n = newExpressionNode(ExpKind::IdK);
                 if (n != nullptr) {
                     n->attribute = token.tokenString;
                 }
                 match(TokenType::ID);
                 break;
-            case LPAREN:
+            case TokenType::LPAREN:
                 match(TokenType::LPAREN);
-                n = arithmetic_expression();
+                n = expression();
                 match(TokenType::RPAREN);
                 break;
             default:
@@ -320,6 +367,14 @@ namespace Compiler::Parser {
                 break;
             case TokenType::WRITE:
                 n = write_statement();
+                match(TokenType::SEMI);
+                break;
+            case TokenType::INT:
+            case TokenType::FLOAT:
+            case TokenType::DOUBLE:
+            case TokenType::BOOL:
+            case TokenType::STRING:
+                n = declaration_statement();
                 match(TokenType::SEMI);
                 break;
             default:
@@ -395,7 +450,7 @@ namespace Compiler::Parser {
     node newStatementNode(StmtKind stmtKind) {
         node n = std::make_shared<TreeNode>();
         n->lineNumber = Scanner::lineNumber;
-        n->nodeKind = NodeKind::StmtK;
+        n->stmt_or_exp = StmtOrExp::StmtK;
         n->kind = stmtKind;
         return n;
     }
@@ -403,7 +458,7 @@ namespace Compiler::Parser {
     node newExpressionNode(ExpKind expKind) {
         node n = std::make_shared<TreeNode>();
         n->lineNumber = Scanner::lineNumber;
-        n->nodeKind = NodeKind::ExpK;
+        n->stmt_or_exp = StmtOrExp::ExpK;
         n->kind = expKind;
         n->expType = ExpType::Void;
         return n;
@@ -414,7 +469,7 @@ namespace Compiler::Parser {
             for (int i = 0; i < tab_count; i++) {
                 fprintf(OUTPUT_STREAM, "\t");
             }
-            if (n->nodeKind == NodeKind::StmtK) {
+            if (n->stmt_or_exp == StmtOrExp::StmtK) {
                 switch (std::get<StmtKind>(n->kind)) {
                     case StmtKind::IfK:
                         fprintf(OUTPUT_STREAM, "If\n");
@@ -424,6 +479,10 @@ namespace Compiler::Parser {
                         break;
                     case StmtKind::AssignK:
                         fprintf(OUTPUT_STREAM, "Assign to : %s\n", std::get<string_ptr>(n->attribute)->c_str());
+                        break;
+                    case StmtKind::DeclarationK:
+                        fprintf(OUTPUT_STREAM, "Declaration type : %s\n",
+                                getTokenRepresentation(std::get<TokenType>(n->attribute), nullptr).c_str());
                         break;
                     case StmtKind::ReadK:
                         fprintf(OUTPUT_STREAM, "Read : %s\n", std::get<string_ptr>(n->attribute)->c_str());
@@ -435,7 +494,7 @@ namespace Compiler::Parser {
                         fprintf(OUTPUT_STREAM, "Do\n");
                         break;
                 }
-            } else if (n->nodeKind == NodeKind::ExpK) {
+            } else if (n->stmt_or_exp == StmtOrExp::ExpK) {
                 switch (std::get<ExpKind>(n->kind)) {
                     case ExpKind::OpK:
                         fprintf(OUTPUT_STREAM, "Op: %s\n",
@@ -449,6 +508,19 @@ namespace Compiler::Parser {
                         break;
                     case ExpKind::ConstDoubleK:
                         fprintf(OUTPUT_STREAM, "ConstDouble: %f\n", std::get<double>(n->attribute));
+                        break;
+                    case ExpKind::ConstBoolK:
+                        switch (std::get<BOOL>(n->attribute)) {
+                            case BOOL::TRUE:
+                                fprintf(OUTPUT_STREAM, "ConstBool: true\n");
+                                break;
+                            case BOOL::FALSE:
+                                fprintf(OUTPUT_STREAM, "ConstBool: false\n");
+                                break;
+                        }
+                        break;
+                    case ExpKind::ConstStringK:
+                        fprintf(OUTPUT_STREAM, "ConstString: %s\n", std::get<string_ptr>(n->attribute)->c_str());
                         break;
                     case ExpKind::IdK:
                         fprintf(OUTPUT_STREAM, "Id: %s\n", std::get<string_ptr>(n->attribute)->c_str());
