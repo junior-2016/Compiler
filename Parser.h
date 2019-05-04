@@ -44,26 +44,75 @@ namespace Compiler::Parser {
     };
 
     using node = std::shared_ptr<struct TreeNode>;
+
     struct TreeNode {
+    public:
         std::vector<node> children;
         node sibling = nullptr;
         int lineNumber = 0;
 
-        // select stmt_or_exp => select kind => if expKind select exp type.
+        // select stmt_or_exp => select kind
         StmtOrExp stmt_or_exp;
         std::variant<StmtKind, ExpKind> kind;
 
-        ExpType expType; // for expression type checking
+        ExpType expType = ExpType::Void; // 后面遍历AST的时候才能得到表达式的类型,默认无类型
 
+    private:
+        struct attribute_null_t {
+        };
+    public:
         std::variant<
+                /* attribute_null_t: variant.index()为0的占位空属性.
+                 * 当语法错误发生在属性值时, 将导致attribute没有被设置任何确定的值.
+                 * 此时attribute会默认其值为index=0的空属性.
+                 * (实际写代码时,不需要显式地给attribute赋一个空属性,只需要在std::get<>的时候判断index()是不是0就行了)
+                 */
+                attribute_null_t,
                 TokenType, /* 运算逻辑符号Token(operator)或者声明类型的Token(data type) */
                 int,       /* 解析整型常量(10/16/8进制)的字符串为int类型的值,储存在节点属性值里 */
                 float,     /* 解析单精度浮点常量(f/F结尾)的字符串为float类型的值,储存在节点属性值里 */
                 double,    /* 解析双精度浮点常量的字符串为double类型的值,储存在节点属性值里 */
                 BOOL,      /* 解析bool类型的值,只有true,false两种取值 */
-                string_ptr /* ID型Token的名称 或者 字符串常量 => 通过kind区分 */
+                string_ptr /* ID型Token的名称 或者 字符串常量 => 通过ExpKind区分 */
         > attribute; // 节点属性
     };
+
+    /**
+     * 判断一个节点的属性值是否为空(即没有被正确设置)
+     */
+    inline bool is_attribute_null(const node &n) {
+        return n->attribute.index() == 0;
+    }
+
+    inline std::string get_attribute_string(const node &n) {
+        if (is_attribute_null(n)) return "null_attribute";
+        try {
+            switch (n->attribute.index()) {
+                case 1:
+                    return getTokenRepresentation(std::get<TokenType>(n->attribute), nullptr);
+                case 2:
+                    return std::to_string(std::get<int>(n->attribute));
+                case 3:
+                    return std::to_string(std::get<float>(n->attribute));
+                case 4:
+                    return std::to_string(std::get<double>(n->attribute));
+                case 5:
+                    switch (std::get<BOOL>(n->attribute)) {
+                        case BOOL::TRUE:
+                            return "true";
+                        case BOOL::FALSE:
+                            return "false";
+                        default:
+                            return "";
+                    }
+                case 6:
+                    return *std::get<string_ptr>(n->attribute);
+            }
+        } catch (std::bad_variant_access &error) {
+            std::cerr << "get_attribute_string() exception: " << error.what();
+        }
+        return "";
+    }
 
     node parse();
 

@@ -8,6 +8,9 @@
 #include "StringLiteralPool.h"
 
 namespace Compiler::Parser {
+    /* global token */
+    Scanner::TokenRet token;
+
     /* parse tree node */
     node newStatementNode(StmtKind stmtKind);
 
@@ -49,19 +52,26 @@ namespace Compiler::Parser {
 
     node factor_expression();
 
-    Scanner::TokenRet token;
+    /**
+     * 提交语法错误
+     * @param func_string 函数名字符串
+     * @param expected_token_string 期待的token字符串
+     */
+    inline void report_syntax_error(const std::string &func_string, const std::string &expected_token_string) {
+        using namespace Compiler::Exception;
+        std::string message = func_string
+                              + " unexpected token ["
+                              + getTokenRepresentation(token.tokenType, token.tokenString)
+                              + "], expected token ["
+                              + expected_token_string
+                              + "] on line:" + std::to_string(Scanner::lineNumber);
+        ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
+    }
 
     inline void match(TokenType target) {
-        using namespace Compiler::Exception;
         if (token.tokenType == target) token = Scanner::getToken();
         else {
-            std::string message = "match() unexpected token ["
-                                  + getTokenRepresentation(token.tokenType, token.tokenString)
-                                  + "], expected token ["
-                                  + getTokenRepresentation(target, nullptr)
-                                  + "] on line:"
-                                  + std::to_string(Scanner::lineNumber);
-            ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
+            report_syntax_error("match()", getTokenRepresentation(target, nullptr));
         }
     }
 
@@ -93,45 +103,77 @@ namespace Compiler::Parser {
      *                ... -> if [expr] then [ if [expr] then [stat_sequence] else [stat_sequence] end ] end
      */
     node if_else_statement() {
-        node n = newStatementNode(StmtKind::IfK);
-        match(TokenType::IF);
-        if (n != nullptr) n->children.push_back(expression());
-        match(TokenType::THEN);
-        if (n != nullptr) n->children.push_back(statement_sequence());
-        if (token.tokenType == TokenType::ELSE) { // 这里必须写成 if(token_type is ELSE){ match (ELSE); ...},代表一种可选的推导分支
-            match(TokenType::ELSE);
-            if (n != nullptr) n->children.push_back(statement_sequence());
+        node n = nullptr;
+        switch (token.tokenType) {
+            case TokenType::IF:
+                n = newStatementNode(StmtKind::IfK);
+                if (n != nullptr) {
+                    match(TokenType::IF);
+                    n->children.push_back(expression());
+                    match(TokenType::THEN);
+                    n->children.push_back(statement_sequence());
+                    if (token.tokenType == TokenType::ELSE) {
+                        // 这里必须写成 if(token_type is ELSE){ match (ELSE); ...},代表一种可选的推导分支
+                        match(TokenType::ELSE);
+                        n->children.push_back(statement_sequence());
+                    }
+                    match(TokenType::END);
+                }
+                break;
+            default:
+                report_syntax_error("if_else_statement()", getTokenRepresentation(TokenType::IF, nullptr));
+                break;
         }
-        match(TokenType::END);
         return n;
     }
 
     /**
-     * declaration_statement => Type ID := expression (对变量声明并且完成定义,不允许无初始化定义的声明)
+     * declaration_statement => Type assign_statement
+     * 对变量声明并且完成赋值,不允许无初始化定义(赋值)的声明.
+     * 下面三种情况都会报语法错误
+     * Type;  Type ID;  Type ID := ;
      */
     node declaration_statement() {
-        node n = newStatementNode(StmtKind::DeclarationK);
-        if (n != nullptr) {
-            n->attribute = token.tokenType;//这里要求当前token已经判定为INT/DOUBLE/FLOAT/BOOL/STRING
-        }
-        match(token.tokenType); // 必定命中
-        if (token.tokenType == TokenType::ID) {
-            n->children.push_back(assign_statement());
+        node n = nullptr;
+        switch (token.tokenType) {
+            case TokenType::INT:
+            case TokenType::FLOAT:
+            case TokenType::DOUBLE:
+            case TokenType::BOOL:
+            case TokenType::STRING:
+                n = newStatementNode(StmtKind::DeclarationK);
+                if (n != nullptr) {
+                    n->attribute = token.tokenType;
+                    match(token.tokenType);
+                    n->children.push_back(assign_statement());
+                }
+                break;
+            default:
+                report_syntax_error("declaration_statement()", "......");
+                break;
         }
         return n;
     }
 
     /**
-     * assign_statement => ID := expression (赋值语句,对变量ID赋值之前必须先存在声明)
+     * assign_statement => ID := expression (赋值语句. 注意对变量ID的任何赋值之前必须先存在声明)
      */
     node assign_statement() {
-        node n = newStatementNode(StmtKind::AssignK);
-        if (n != nullptr && token.tokenType == TokenType::ID) {
-            n->attribute = token.tokenString;
+        node n = nullptr;
+        switch (token.tokenType) {
+            case TokenType::ID:
+                n = newStatementNode(StmtKind::AssignK);
+                if (n != nullptr) {
+                    n->attribute = token.tokenString;
+                    match(TokenType::ID);
+                    match(TokenType::ASSIGN);
+                    n->children.push_back(expression());
+                }
+                break;
+            default:
+                report_syntax_error("assign_statement()", getTokenRepresentation(TokenType::ID, nullptr));
+                break;
         }
-        match(TokenType::ID);
-        match(TokenType::ASSIGN);
-        if (n != nullptr) n->children.push_back(expression());
         return n;
     }
 
@@ -139,11 +181,21 @@ namespace Compiler::Parser {
      * do_while_statement => do statement_sequence while expression
      */
     node do_while_statement() {
-        node n = newStatementNode(StmtKind::WhileK);
-        match(TokenType::DO);
-        if (n != nullptr) n->children.push_back(statement_sequence());
-        match(TokenType::WHILE);
-        if (n != nullptr) n->children.push_back(expression());
+        node n = nullptr;
+        switch (token.tokenType) {
+            case TokenType::DO:
+                n = newStatementNode(StmtKind::WhileK);
+                if (n != nullptr) {
+                    match(TokenType::DO);
+                    n->children.push_back(statement_sequence());
+                    match(TokenType::WHILE);
+                    n->children.push_back(expression());
+                }
+                break;
+            default:
+                report_syntax_error("do_while_statement()", getTokenRepresentation(TokenType::DO, nullptr));
+                break;
+        }
         return n;
     }
 
@@ -151,11 +203,21 @@ namespace Compiler::Parser {
      * repeat_until_statement => repeat statement_sequence until expression
      */
     node repeat_until_statement() {
-        node n = newStatementNode(StmtKind::RepeatK);
-        match(TokenType::REPEAT);
-        if (n != nullptr) n->children.push_back(statement_sequence());
-        match(TokenType::UNTIL);
-        if (n != nullptr) n->children.push_back(expression());
+        node n = nullptr;
+        switch (token.tokenType) {
+            case TokenType::REPEAT:
+                n = newStatementNode(StmtKind::RepeatK);
+                if (n != nullptr) {
+                    match(TokenType::REPEAT);
+                    n->children.push_back(statement_sequence());
+                    match(TokenType::UNTIL);
+                    n->children.push_back(expression());
+                }
+                break;
+            default:
+                report_syntax_error("repeat_until_statement()", getTokenRepresentation(TokenType::REPEAT, nullptr));
+                break;
+        }
         return n;
     }
 
@@ -163,12 +225,22 @@ namespace Compiler::Parser {
      * read_statement => read ID
      */
     node read_statement() {
-        node n = newStatementNode(StmtKind::ReadK);
-        match(TokenType::READ);
-        if (n != nullptr && token.tokenType == TokenType::ID) {
-            n->attribute = token.tokenString;
+        node n = nullptr;
+        switch (token.tokenType) {
+            case TokenType::READ:
+                n = newStatementNode(StmtKind::ReadK);
+                if (n != nullptr) {
+                    match(TokenType::READ);
+                    if (token.tokenType == TokenType::ID) { // 没有语法错误的情况下,设置正确的属性
+                        n->attribute = token.tokenString;
+                    } // 如果存在语法错误,n->attribute没有被正确设置,则n->attribute.index()默认为0,即空属性.
+                    match(TokenType::ID); // 如果没有语法错误match成功,否则match失败.
+                }
+                break;
+            default:
+                report_syntax_error("read_statement()", getTokenRepresentation(TokenType::READ, nullptr));
+                break;
         }
-        match(TokenType::ID);
         return n;
     }
 
@@ -176,9 +248,19 @@ namespace Compiler::Parser {
      * write_statement => write expression
      */
     node write_statement() {
-        node n = newStatementNode(StmtKind::WriteK);
-        match(TokenType::WRITE);
-        if (n != nullptr) n->children.push_back(expression());
+        node n = nullptr;
+        switch (token.tokenType) {
+            case TokenType::WRITE:
+                n = newStatementNode(StmtKind::WriteK);
+                if (n != nullptr) {
+                    match(TokenType::WRITE);
+                    n->children.push_back(expression());
+                }
+                break;
+            default:
+                report_syntax_error("write_statement()", getTokenRepresentation(TokenType::WRITE, nullptr));
+                break;
+        }
         return n;
     }
 
@@ -324,12 +406,8 @@ namespace Compiler::Parser {
                 match(TokenType::RPAREN);
                 break;
             default:
-                using namespace Compiler::Exception;
-                std::string message = "arithmetic_factor() unexpected token ["
-                                      + getTokenRepresentation(token.tokenType, token.tokenString)
-                                      + "] on line:" + std::to_string(Scanner::lineNumber);
-                ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
-                // token = Scanner::getToken(); // TODO: 不清楚这里是否需要前进一个Token
+                report_syntax_error("factor_expression()", "......");
+                // token = Scanner::getToken(); // 这里应该不需要前进一个token.
                 break;
         }
         return n;
@@ -337,10 +415,10 @@ namespace Compiler::Parser {
 
     /**
      * version_1:
-     * statement => if_else_stat | repeat_until_stat | do_while_stat | assign_stat | read_stat | write_stat
+     * statement => if_else_stat | repeat_until_stat | do_while_stat | assign_stat | read_stat | write_stat | declaration_stat
      *
-     * version_2:
-     * statement => if_else_stat | repeat_until_stat; | do_while_stat; | assign_stat; | read_stat; | write_stat;
+     * version_2:(if_else_stat不加分号)
+     * statement => if_else_stat | repeat_until_stat; | do_while_stat; | assign_stat; | read_stat; | write_stat; | declaration_stat;
      */
     node statement() {
         using namespace Compiler::Exception;
@@ -378,12 +456,14 @@ namespace Compiler::Parser {
                 match(TokenType::SEMI);
                 break;
             default:
-                using namespace Compiler::Exception;
-                std::string message = "statement() unexpected token ["
-                                      + getTokenRepresentation(token.tokenType, token.tokenString)
-                                      + "] on line:" + std::to_string(Scanner::lineNumber);
-                ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
-                // token = Scanner::getToken(); // TODO: 不清楚这里是否需要前进一个Token
+                report_syntax_error("statement()", "......");
+                /**
+                 　* 注意下面这一步很重要,如果在statement()语句一开始没有匹配到任何一个token,必须往下前进一个token.
+                   * 如果token不改变,statement()结束回到statement_sequence(), statement_sequence()又进一步调用statement(),
+                   * 然后又是一轮不匹配,就会陷入 statement() ---不匹配---> statement_sequence ---调用---> statement() ---不匹配---> ...
+                   * 的死循环. 当测试源文件开头是一个运算比较符号比如 ">" 的时候这种情况就出现了.
+                 　*/
+                token = Scanner::getToken();
                 break;
         }
         return n;
@@ -460,7 +540,6 @@ namespace Compiler::Parser {
         n->lineNumber = Scanner::lineNumber;
         n->stmt_or_exp = StmtOrExp::ExpK;
         n->kind = expKind;
-        n->expType = ExpType::Void;
         return n;
     }
 
@@ -478,14 +557,13 @@ namespace Compiler::Parser {
                         fprintf(OUTPUT_STREAM, "Repeat\n");
                         break;
                     case StmtKind::AssignK:
-                        fprintf(OUTPUT_STREAM, "Assign to : %s\n", std::get<string_ptr>(n->attribute)->c_str());
+                        fprintf(OUTPUT_STREAM, "Assign to : %s\n", get_attribute_string(n).c_str());
                         break;
                     case StmtKind::DeclarationK:
-                        fprintf(OUTPUT_STREAM, "Declaration type : %s\n",
-                                getTokenRepresentation(std::get<TokenType>(n->attribute), nullptr).c_str());
+                        fprintf(OUTPUT_STREAM, "Declaration type : %s\n", get_attribute_string(n).c_str());
                         break;
                     case StmtKind::ReadK:
-                        fprintf(OUTPUT_STREAM, "Read : %s\n", std::get<string_ptr>(n->attribute)->c_str());
+                        fprintf(OUTPUT_STREAM, "Read : %s\n", get_attribute_string(n).c_str());
                         break;
                     case StmtKind::WriteK:
                         fprintf(OUTPUT_STREAM, "Write\n");
@@ -497,33 +575,25 @@ namespace Compiler::Parser {
             } else if (n->stmt_or_exp == StmtOrExp::ExpK) {
                 switch (std::get<ExpKind>(n->kind)) {
                     case ExpKind::OpK:
-                        fprintf(OUTPUT_STREAM, "Op: %s\n",
-                                getTokenRepresentation(std::get<TokenType>(n->attribute), nullptr).c_str());
+                        fprintf(OUTPUT_STREAM, "Op: %s\n", get_attribute_string(n).c_str());
                         break;
                     case ExpKind::ConstIntK:
-                        fprintf(OUTPUT_STREAM, "ConstInt: %d\n", std::get<int>(n->attribute));
+                        fprintf(OUTPUT_STREAM, "ConstInt: %s\n", get_attribute_string(n).c_str());
                         break;
                     case ExpKind::ConstFloatK:
-                        fprintf(OUTPUT_STREAM, "ConstFloat: %f\n", std::get<float>(n->attribute));
+                        fprintf(OUTPUT_STREAM, "ConstFloat: %s\n", get_attribute_string(n).c_str());
                         break;
                     case ExpKind::ConstDoubleK:
-                        fprintf(OUTPUT_STREAM, "ConstDouble: %f\n", std::get<double>(n->attribute));
+                        fprintf(OUTPUT_STREAM, "ConstDouble: %s\n", get_attribute_string(n).c_str());
                         break;
                     case ExpKind::ConstBoolK:
-                        switch (std::get<BOOL>(n->attribute)) {
-                            case BOOL::TRUE:
-                                fprintf(OUTPUT_STREAM, "ConstBool: true\n");
-                                break;
-                            case BOOL::FALSE:
-                                fprintf(OUTPUT_STREAM, "ConstBool: false\n");
-                                break;
-                        }
+                        fprintf(OUTPUT_STREAM, "ConstBool: %s\n", get_attribute_string(n).c_str());
                         break;
                     case ExpKind::ConstStringK:
-                        fprintf(OUTPUT_STREAM, "ConstString: %s\n", std::get<string_ptr>(n->attribute)->c_str());
+                        fprintf(OUTPUT_STREAM, "ConstString: %s\n", get_attribute_string(n).c_str());
                         break;
                     case ExpKind::IdK:
-                        fprintf(OUTPUT_STREAM, "Id: %s\n", std::get<string_ptr>(n->attribute)->c_str());
+                        fprintf(OUTPUT_STREAM, "Id: %s\n", get_attribute_string(n).c_str());
                         break;
                 }
             } else {

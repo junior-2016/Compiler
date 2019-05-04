@@ -11,10 +11,9 @@ namespace Compiler::Exception {
 
     std::map<ExceptionType, std::string> getExceptionTypeStrings() {
         static auto map = std::map<ExceptionType, std::string>
-                {{ExceptionType::ID_REPEAT,    "ID_REPEAT"},
-                 {ExceptionType::MATCH_ERROR,  "MATCH_ERROR"},
-                 {ExceptionType::ILLEGAL_CHAR, "ILLEGAL_CHAR"},
-                 {ExceptionType::SYNTAX_ERROR, "SYNTAX_ERROR"}};
+                {{ExceptionType::LEXICAL_ERROR,  "LEXICAL_ERROR"},
+                 {ExceptionType::SYNTAX_ERROR,   "SYNTAX_ERROR"},
+                 {ExceptionType::ANALYSIS_ERROR, "ANALYSIS_ERROR"}};
         return map;
     }
 
