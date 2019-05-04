@@ -9,6 +9,7 @@
 #define ECHO_SOURCE false
 #define TRACE_SCANNER false
 #define TRACE_PARSER true
+#define TRACE_ANALYSER true
 #define OUTPUT_STREAM stdout
 
 #endif //SCANNER_CONFIG_H

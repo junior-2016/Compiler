@@ -524,6 +524,9 @@ namespace Compiler::Parser {
             ExceptionHandle::getHandle().add_exception(
                     ExceptionType::SYNTAX_ERROR, "Parser don't reach END_FILE finally");
         }
+        if (TRACE_PARSER) {
+            printTree(root);
+        }
         return root;
     }
 

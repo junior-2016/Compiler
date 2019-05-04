@@ -7,9 +7,8 @@
 
 #include "Compiler.h"
 #include "Parser.h"
-#include "SymbolTable.h"
 
 namespace Compiler::Analyser {
-
+    void analyse(Parser::node n);
 }
 #endif //COMPILER_ANALYSER_H
