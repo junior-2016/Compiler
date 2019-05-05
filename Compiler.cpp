@@ -26,7 +26,7 @@ namespace Compiler {
         readFromFile(n - 1, argv + 1);
         for (auto &pair:files) {
             file = pair.second;
-            node root = parse();
+            auto root = parse();
             if (!ExceptionHandle::getHandle().hasException()) { // 词法/语法没有错误才能继续语义分析
                 analyse(root);
                 if (ExceptionHandle::getHandle().hasException()) { // 语义错误输出

@@ -6,6 +6,7 @@
 #define SCANNER_FILEUTIL_H
 
 #include "Compiler.h"
+#include "Util.h"
 
 namespace Compiler::FileUtil {
     // 这里强制用 extern 声明但是不对其定义(即不进行任何初始化).如果你直接写 std::vector<FILE*> files,
@@ -18,7 +19,7 @@ namespace Compiler::FileUtil {
     // https://blog.csdn.net/u014357799/article/details/79121340.
     // https://blog.csdn.net/supervictim/article/details/50458259.
 
-    extern std::vector<std::pair<std::string,FILE *>> files;
+    extern std::vector<std::pair<string_t, FILE *>> files;
 
     void readFromFile(int fileCount, char *fileName[]);
 }

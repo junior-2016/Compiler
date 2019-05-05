@@ -36,7 +36,7 @@ namespace Compiler::Scanner {
         DONE
     } State;
 
-    char buffer[LINE_BUFFER_SIZE]; // 用buffer储存文件读取的每一行
+    char_t buffer[LINE_BUFFER_SIZE]; // 用buffer储存文件读取的每一行
     int bufSize = 0;    // 读取一行后实际的一行长度
     int lineNumber = 0; // 文件行数
     int pos = 0;        // 读取一行后,每一个字符的游标
@@ -73,7 +73,7 @@ namespace Compiler::Scanner {
 
     TokenRet getToken() {
         using namespace Compiler::Exception;
-        std::string tokenString;
+        string_t tokenString;
         TokenType currentToken = END_FILE;
         State state = START;
         bool saveTokenString;
@@ -82,13 +82,14 @@ namespace Compiler::Scanner {
 
         while (state != DONE) {
             int c = getNextChar();
-            if (legalCharTable.find((char) c) == legalCharTable.end()) {
+            if (legalCharTable.find((char_t) c) == legalCharTable.end()) {
                 if (state == INCOMMENT || state == INSTR) {
                     // pass,不处理
                 } else {
-                    std::string message = "LineNumber:" + std::to_string(lineNumber) + ",Pos:" +
-                                          std::to_string(pos) + ",illegal char:" + char(c);
-                    ExceptionHandle::getHandle().add_exception(ExceptionType::LEXICAL_ERROR, message);
+                    ExceptionHandle::getHandle().add_exception(
+                            ExceptionType::LEXICAL_ERROR,
+                            "LineNumber:" + std::to_string(lineNumber) + ",Pos:" +
+                            std::to_string(pos) + ",illegal char:" + char_t(c));
                     continue; // 跳过非法字符
                 }
             }// 处理非法字符,直接跳过,在注释里或者字符串里的字符不管合不合法.
@@ -171,8 +172,9 @@ namespace Compiler::Scanner {
                         // (注释允许跨多行,因此可以一直判断到EOF)
                         state = DONE;
                         currentToken = END_FILE;
-                        std::string message = "Comment match error on : LineNumber " + std::to_string(lineNumber);
-                        ExceptionHandle::getHandle().add_exception(ExceptionType::LEXICAL_ERROR, message);
+                        ExceptionHandle::getHandle().add_exception(
+                                ExceptionType::LEXICAL_ERROR,
+                                "Comment match error on : LineNumber " + std::to_string(lineNumber));
                     }
                     break;
                 case INSTR:
@@ -186,8 +188,9 @@ namespace Compiler::Scanner {
                         state = DONE;
                         if (c == EOF) currentToken = END_FILE;
                         else currentToken = ERROR;
-                        std::string message = "String match error on : LineNumber " + std::to_string(lineNumber);
-                        ExceptionHandle::getHandle().add_exception(ExceptionType::LEXICAL_ERROR, message);
+                        ExceptionHandle::getHandle().add_exception(
+                                ExceptionType::LEXICAL_ERROR,
+                                "String match error on : LineNumber " + std::to_string(lineNumber));
                     } else {
                         saveTokenString = true;
                     }
@@ -309,7 +312,7 @@ namespace Compiler::Scanner {
                     break;
             }
             if (saveTokenString) {
-                tokenString += (char) c;
+                tokenString += (char_t) c;
             }
             if (state == DONE) {
                 if (currentToken == ID) {

@@ -12,45 +12,45 @@ namespace Compiler::Parser {
     Scanner::TokenRet token;
 
     /* parse tree node */
-    node newStatementNode(StmtKind stmtKind);
+    TreeNode::ptr newStatementNode(StmtKind stmtKind);
 
-    node newExpressionNode(ExpKind expKind);
+    TreeNode::ptr newExpressionNode(ExpKind expKind);
 
     /* statement  */
-    node statement_sequence();
+    TreeNode::ptr statement_sequence();
 
-    node statement();
+    TreeNode::ptr statement();
 
-    node if_else_statement();
+    TreeNode::ptr if_else_statement();
 
-    node assign_statement();
+    TreeNode::ptr assign_statement();
 
-    node declaration_statement();
+    TreeNode::ptr declaration_statement();
 
-    node do_while_statement();
+    TreeNode::ptr do_while_statement();
 
-    node repeat_until_statement();
+    TreeNode::ptr repeat_until_statement();
 
-    node read_statement();
+    TreeNode::ptr read_statement();
 
-    node write_statement();
+    TreeNode::ptr write_statement();
 
     /* expression */
-    node expression();
+    TreeNode::ptr expression();
 
-    node logical_or_expression();
+    TreeNode::ptr logical_or_expression();
 
-    node logical_and_expression();
+    TreeNode::ptr logical_and_expression();
 
-    node equality_expression();
+    TreeNode::ptr equality_expression();
 
-    node relational_expression();
+    TreeNode::ptr relational_expression();
 
-    node arithmetic_additive_expression();
+    TreeNode::ptr arithmetic_additive_expression();
 
-    node arithmetic_multiplicative_expression();
+    TreeNode::ptr arithmetic_multiplicative_expression();
 
-    node factor_expression();
+    TreeNode::ptr factor_expression();
 
     /**
      * 提交语法错误
@@ -102,8 +102,8 @@ namespace Compiler::Parser {
      *  过程: Start -> ... -> if [expr] then [stat_sequence] end ->
      *                ... -> if [expr] then [ if [expr] then [stat_sequence] else [stat_sequence] end ] end
      */
-    node if_else_statement() {
-        node n = nullptr;
+    TreeNode::ptr if_else_statement() {
+        TreeNode::ptr n = nullptr;
         switch (token.tokenType) {
             case TokenType::IF:
                 n = newStatementNode(StmtKind::IfK);
@@ -128,13 +128,11 @@ namespace Compiler::Parser {
     }
 
     /**
-     * declaration_statement => Type assign_statement
+     * declaration_statement => Type ID := expression
      * 对变量声明并且完成赋值,不允许无初始化定义(赋值)的声明.
-     * 下面三种情况都会报语法错误
-     * Type;  Type ID;  Type ID := ;
      */
-    node declaration_statement() {
-        node n = nullptr;
+    TreeNode::ptr declaration_statement() {
+        TreeNode::ptr n = nullptr;
         switch (token.tokenType) {
             case TokenType::INT:
             case TokenType::FLOAT:
@@ -143,9 +141,21 @@ namespace Compiler::Parser {
             case TokenType::STRING:
                 n = newStatementNode(StmtKind::DeclarationK);
                 if (n != nullptr) {
-                    n->attribute = token.tokenType;
-                    match(token.tokenType);
-                    n->children.push_back(assign_statement());
+                    switch (token.tokenType) {
+                        case TokenType::INT:    n->type = Type::Integer; break;
+                        case TokenType::DOUBLE: n->type = Type::Double;break;
+                        case TokenType::FLOAT:  n->type = Type::Float; break;
+                        case TokenType::BOOL:   n->type = Type::Boolean;break;
+                        case TokenType::STRING: n->type = Type::String;break;
+                        default: break;
+                    }
+                    match(token.tokenType); // 匹配类型token,必读命中
+                    if (token.tokenType==TokenType::ID) { // 如果语法正确,attribute会被正确设置为ID的字符串
+                        n->attribute = token.tokenString;
+                    } // 如果发生语法错误,即下一个token不是ID,那么attribute将不会被正确设置,依旧为默认值null_t(空属性)
+                    match(TokenType::ID);
+                    match(TokenType::ASSIGN);
+                    n->children.push_back(expression());
                 }
                 break;
             default:
@@ -158,8 +168,8 @@ namespace Compiler::Parser {
     /**
      * assign_statement => ID := expression (赋值语句. 注意对变量ID的任何赋值之前必须先存在声明)
      */
-    node assign_statement() {
-        node n = nullptr;
+    TreeNode::ptr assign_statement() {
+        TreeNode::ptr n = nullptr;
         switch (token.tokenType) {
             case TokenType::ID:
                 n = newStatementNode(StmtKind::AssignK);
@@ -180,8 +190,8 @@ namespace Compiler::Parser {
     /**
      * do_while_statement => do statement_sequence while expression
      */
-    node do_while_statement() {
-        node n = nullptr;
+    TreeNode::ptr do_while_statement() {
+        TreeNode::ptr n = nullptr;
         switch (token.tokenType) {
             case TokenType::DO:
                 n = newStatementNode(StmtKind::WhileK);
@@ -202,8 +212,8 @@ namespace Compiler::Parser {
     /**
      * repeat_until_statement => repeat statement_sequence until expression
      */
-    node repeat_until_statement() {
-        node n = nullptr;
+    TreeNode::ptr repeat_until_statement() {
+        TreeNode::ptr n = nullptr;
         switch (token.tokenType) {
             case TokenType::REPEAT:
                 n = newStatementNode(StmtKind::RepeatK);
@@ -224,8 +234,8 @@ namespace Compiler::Parser {
     /**
      * read_statement => read ID
      */
-    node read_statement() {
-        node n = nullptr;
+    TreeNode::ptr read_statement() {
+        TreeNode::ptr n = nullptr;
         switch (token.tokenType) {
             case TokenType::READ:
                 n = newStatementNode(StmtKind::ReadK);
@@ -247,8 +257,8 @@ namespace Compiler::Parser {
     /**
      * write_statement => write expression
      */
-    node write_statement() {
-        node n = nullptr;
+    TreeNode::ptr write_statement() {
+        TreeNode::ptr n = nullptr;
         switch (token.tokenType) {
             case TokenType::WRITE:
                 n = newStatementNode(StmtKind::WriteK);
@@ -273,10 +283,11 @@ namespace Compiler::Parser {
      *           op         next_expr (后执行)
      * next_expr    next_expr (先执行)
      */
-    node expression_template(const std::function<node()> &nextExpression, std::initializer_list<TokenType> tokenList) {
-        node n = nextExpression();
+    TreeNode::ptr expression_template(const std::function<TreeNode::ptr()> &nextExpression,
+                                      std::initializer_list<TokenType> tokenList) {
+        auto n = nextExpression();
         while (std::find(tokenList.begin(), tokenList.end(), token.tokenType) != tokenList.end()) {
-            node p = newExpressionNode(ExpKind::OpK);
+            auto p = newExpressionNode(ExpKind::OpK);
             if (p != nullptr) {
                 p->attribute = token.tokenType;
                 p->children.push_back(n);
@@ -291,7 +302,7 @@ namespace Compiler::Parser {
     /**
      * expression => logical_or_expression
      */
-    node expression() {
+    TreeNode::ptr expression() {
         return logical_or_expression();
     }
 
@@ -299,28 +310,28 @@ namespace Compiler::Parser {
      * logical_or_expression => logical_and_expression { or logical_and_expression }*
 
      */
-    node logical_or_expression() {
+    TreeNode::ptr logical_or_expression() {
         return expression_template(logical_and_expression, {TokenType::OR});
     }
 
     /**
      * logical_and_expression => equality_expression { and equality_expression }*
      */
-    node logical_and_expression() {
+    TreeNode::ptr logical_and_expression() {
         return expression_template(equality_expression, {TokenType::AND});
     }
 
     /**
      * equality_expression => relational_expression { = | !=  relational_expression}*
      */
-    node equality_expression() {
+    TreeNode::ptr equality_expression() {
         return expression_template(relational_expression, {TokenType::EQ, TokenType::NE});
     }
 
     /**
      * relational_expression => additive_expression { > | < | >= | <=  additive_expression } *
      */
-    node relational_expression() {
+    TreeNode::ptr relational_expression() {
         return expression_template(arithmetic_additive_expression,
                                    {TokenType::LT, TokenType::LE, TokenType::BT, TokenType::BE});
     }
@@ -328,14 +339,14 @@ namespace Compiler::Parser {
     /**
      * additive_expression => multiplicative_expression { +|- multiplicative_expression }*
      */
-    node arithmetic_additive_expression() {
+    TreeNode::ptr arithmetic_additive_expression() {
         return expression_template(arithmetic_multiplicative_expression, {TokenType::PLUS, TokenType::MINUS});
     }
 
     /**
      *  multiplicative_expression => factor_expression { * | / | % factor_expression }*
      */
-    node arithmetic_multiplicative_expression() {
+    TreeNode::ptr arithmetic_multiplicative_expression() {
         return expression_template(factor_expression, {TokenType::TIMES, TokenType::OVER, TokenType::MOD});
     }
 
@@ -343,8 +354,8 @@ namespace Compiler::Parser {
      * factor_expression => not factor_expression | ID | NUM | STR | BOOL | ( expression )
      * 注意到: STR 不能参与到 arithmetic 或者 logical 运算中,只能在 assignment/declaration/write expression 这些出现.
      */
-    node factor_expression() {
-        node n = nullptr;
+    TreeNode::ptr factor_expression() {
+        TreeNode::ptr n = nullptr;
         switch (token.tokenType) {
             case TokenType::NOT:
                 n = newExpressionNode(ExpKind::OpK);
@@ -361,15 +372,16 @@ namespace Compiler::Parser {
                         case NUM_TYPE::OCT:
                         case NUM_TYPE::HEX:
                             n = newExpressionNode(ExpKind::ConstIntK);
-                            if (n != nullptr) n->attribute = std::stoi(*token.tokenString);// 16/10/8 进制字符串转换为整数
+                            if (n != nullptr)
+                                n->attribute = (int_t) (std::stoi(*token.tokenString));// 16/10/8 进制字符串转换为整数
                             break;
                         case NUM_TYPE::FLOAT:
                             n = newExpressionNode(ExpKind::ConstFloatK);
-                            if (n != nullptr) n->attribute = std::stof(*token.tokenString);
+                            if (n != nullptr) n->attribute = (float_t) (std::stof(*token.tokenString));
                             break;
                         case NUM_TYPE::DOUBLE:
                             n = newExpressionNode(ExpKind::ConstDoubleK);
-                            if (n != nullptr) n->attribute = std::stod(*token.tokenString);
+                            if (n != nullptr) n->attribute = (double_t) (std::stod(*token.tokenString));
                             break;
                     }
                 } catch (std::invalid_argument &e) {
@@ -420,9 +432,9 @@ namespace Compiler::Parser {
      * version_2:(if_else_stat不加分号)
      * statement => if_else_stat | repeat_until_stat; | do_while_stat; | assign_stat; | read_stat; | write_stat; | declaration_stat;
      */
-    node statement() {
+    TreeNode::ptr statement() {
         using namespace Compiler::Exception;
-        node n = nullptr;
+        TreeNode::ptr n = nullptr;
         switch (token.tokenType) {
             case TokenType::IF:
                 n = if_else_statement();
@@ -490,16 +502,16 @@ namespace Compiler::Parser {
      * 上面所有 statement_sequence 结束后紧接着出现的token有: END_FILE , else , end , while , until 几种类型,
      * 因此 statement_sequence()函数 在实现时要以这几种token作为退出循环的条件.
      */
-    node statement_sequence() {
-        node n = statement();
-        node p = n;
+    TreeNode::ptr statement_sequence() {
+        auto n = statement();
+        auto p = n;
         while (token.tokenType != TokenType::END_FILE &&
                token.tokenType != TokenType::ELSE &&
                token.tokenType != TokenType::END &&
                token.tokenType != TokenType::UNTIL &&
                token.tokenType != TokenType::WHILE) {
             // match(TokenType::SEMI); // version_1
-            node q = statement();
+            auto q = statement();
             if (q != nullptr) {
                 if (n == nullptr) {
                     n = q;
@@ -516,7 +528,7 @@ namespace Compiler::Parser {
     /**
      * program -> statement_sequence [END_FILE]
      */
-    node parse() {
+    TreeNode::ptr parse() {
         using namespace Compiler::Exception;
         token = Scanner::getToken();
         auto root = statement_sequence();
@@ -530,23 +542,24 @@ namespace Compiler::Parser {
         return root;
     }
 
-    node newStatementNode(StmtKind stmtKind) {
-        node n = std::make_shared<TreeNode>();
+    TreeNode::ptr newStatementNode(StmtKind stmtKind) {
+        auto n = std::make_shared<TreeNode>();
         n->lineNumber = Scanner::lineNumber;
         n->stmt_or_exp = StmtOrExp::StmtK;
         n->kind = stmtKind;
         return n;
     }
 
-    node newExpressionNode(ExpKind expKind) {
-        node n = std::make_shared<TreeNode>();
+    TreeNode::ptr newExpressionNode(ExpKind expKind) {
+        auto n = std::make_shared<TreeNode>();
         n->lineNumber = Scanner::lineNumber;
         n->stmt_or_exp = StmtOrExp::ExpK;
         n->kind = expKind;
         return n;
     }
 
-    void printTree(node n, int tab_count) {
+    // 注意printTree的第一个参数不要用node&n,否则调用printTree(root)后root也被修改了.
+    void printTree(TreeNode::ptr n, int tab_count) {
         while (n != nullptr) {
             for (int i = 0; i < tab_count; i++) {
                 fprintf(OUTPUT_STREAM, "\t");
@@ -560,10 +573,10 @@ namespace Compiler::Parser {
                         fprintf(OUTPUT_STREAM, "Repeat\n");
                         break;
                     case StmtKind::AssignK:
-                        fprintf(OUTPUT_STREAM, "Assign to : %s\n", get_attribute_string(n).c_str());
+                        fprintf(OUTPUT_STREAM, "Assign to ID : %s\n", get_attribute_string(n).c_str());
                         break;
                     case StmtKind::DeclarationK:
-                        fprintf(OUTPUT_STREAM, "Declaration type : %s\n", get_attribute_string(n).c_str());
+                        fprintf(OUTPUT_STREAM, "Declaration ID : %s\n", get_attribute_string(n).c_str());
                         break;
                     case StmtKind::ReadK:
                         fprintf(OUTPUT_STREAM, "Read : %s\n", get_attribute_string(n).c_str());

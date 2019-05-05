@@ -7,8 +7,11 @@
 
 #include "Compiler.h"
 #include "Parser.h"
+#include "Util.h"
 
 namespace Compiler::Analyser {
-    void analyse(Parser::node n);
+    using namespace Compiler::Parser;
+
+    void analyse(const TreeNode::ptr &n);
 }
 #endif //COMPILER_ANALYSER_H

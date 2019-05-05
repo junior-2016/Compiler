@@ -10,8 +10,8 @@ namespace Compiler {
     // 这样就避免每次调用get-function都去生成一次表.
 
     // 用哈希表处理关键字查询表
-    std::map<std::string, TokenType> getKeyWordTable() {
-        static std::map<std::string, TokenType> table{
+    std::map<string_t, TokenType> getKeyWordTable() {
+        static std::map<string_t, TokenType> table{
                 {"if",     IF},
                 {"then",   THEN},
                 {"else",   ELSE},
@@ -37,8 +37,8 @@ namespace Compiler {
     }
 
     // 手动创建合法字符表,用哈希集合实现
-    std::unordered_set<char> getLegalCharTable() {
-        static std::unordered_set<char> table{
+    std::unordered_set<char_t> getLegalCharTable() {
+        static std::unordered_set<char_t> table{
                 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',
                 'v', 'w', 'x', 'y', 'z',
                 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
@@ -54,7 +54,7 @@ namespace Compiler {
         return table;
     }
 
-    std::string getTokenRepresentation(TokenType type, const string_ptr &ptr) {
+    string_t getTokenRepresentation(TokenType type, const string_ptr &ptr) {
         switch (type) {
             case IF:
                 return "if";
@@ -143,8 +143,8 @@ namespace Compiler {
     }
 
     void printToken(TokenType type, const string_ptr &ptr) {
-        std::string numType;
-        std::string representation = getTokenRepresentation(type, ptr);
+        string_t numType;
+        string_t representation = getTokenRepresentation(type, ptr);
         switch (type) {
             case IF:
             case THEN:

@@ -5,7 +5,7 @@
 #include "FileUtil.h"
 
 namespace Compiler::FileUtil {
-    std::vector<std::pair<std::string, FILE *>> files;
+    std::vector<std::pair<string_t, FILE *>> files;
 
     void readFromFile(int fileCount, char *fileName[]) {
         for (int i = 0; i < fileCount; i++) {
@@ -14,7 +14,7 @@ namespace Compiler::FileUtil {
                 fprintf(stderr, "File %s not found!\n", fileName[i]);
                 exit(1);
             }
-            files.emplace_back(std::string(fileName[i]), file);
+            files.emplace_back(string_t(fileName[i]), file);
         }
     }
 

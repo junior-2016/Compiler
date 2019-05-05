@@ -7,6 +7,9 @@
 
 #include "Compiler.h"
 #include "Token.h"
+#include "Util.h"
+#include "TypeSystem.h"
+
 /**
  * 基于 LL(1) 文法的手写递归下降语法分析器. LL(1)文法也就是 backtracking-free 文法(无需递归后回溯搜索)
  * LL(1) 文法(left to right scan source & left most derivation & lookahead 1 token)的基本要求:
@@ -33,71 +36,60 @@ namespace Compiler::Parser {
         OpK, ConstIntK, ConstFloatK, ConstDoubleK, ConstStringK, ConstBoolK, IdK
     };
 
-    /* 用于类型检查 */
-    enum class ExpType {
-        Void, Integer, Boolean, String, Float, Double
-    };
-
-    // 为了限制bool类型取值,建立一个BOOL enum,取代C语言的bool
-    enum class BOOL {
-        TRUE = true, FALSE = false
-    };
-
-    using node = std::shared_ptr<struct TreeNode>;
-
     struct TreeNode {
     public:
-        std::vector<node> children;
-        node sibling = nullptr;
+        using ptr = std::shared_ptr<struct TreeNode>;
+    public:
+        std::vector<ptr> children;
+        ptr sibling = nullptr;
         int lineNumber = 0;
 
         // select stmt_or_exp => select kind
         StmtOrExp stmt_or_exp;
         std::variant<StmtKind, ExpKind> kind;
 
-        ExpType expType = ExpType::Void; // 后面遍历AST的时候才能得到表达式的类型,默认无类型
+        // 对于expression来说 => 后面遍历AST的时候才能得到表达式的类型;
+        // 对于statement来说  => 只有Declaration-statement需要持有类型信息.
+        Type type = Type::Void; // 默认空类型
 
-    private:
-        struct attribute_null_t {
-        };
     public:
         std::variant<
-                /* attribute_null_t: variant.index()为0的占位空属性.
+                /* null_t: variant.index()为0的占位空属性.
                  * 当语法错误发生在属性值时, 将导致attribute没有被设置任何确定的值.
                  * 此时attribute会默认其值为index=0的空属性.
                  * (实际写代码时,不需要显式地给attribute赋一个空属性,只需要在std::get<>的时候判断index()是不是0就行了)
                  */
-                attribute_null_t,
+                null_t,
                 TokenType, /* 运算逻辑符号Token(operator)或者声明类型的Token(data type) */
-                int,       /* 解析整型常量(10/16/8进制)的字符串为int类型的值,储存在节点属性值里 */
-                float,     /* 解析单精度浮点常量(f/F结尾)的字符串为float类型的值,储存在节点属性值里 */
-                double,    /* 解析双精度浮点常量的字符串为double类型的值,储存在节点属性值里 */
-                BOOL,      /* 解析bool类型的值,只有true,false两种取值 */
-                string_ptr /* ID型Token的名称 或者 字符串常量 => 通过ExpKind区分 */
+                int_t,       /* 解析整型常量(10/16/8进制)的字符串为int类型的值,储存在节点属性值里 */
+                float_t,     /* 解析单精度浮点常量(f/F结尾)的字符串为float类型的值,储存在节点属性值里 */
+                double_t,    /* 解析双精度浮点常量的字符串为double类型的值,储存在节点属性值里 */
+                bool_t,      /* 解析bool类型的值,只有true,false两种取值 */
+                string_ptr   /* ID型Token的名称 或者 字符串常量 => 通过ExpKind区分 */
         > attribute; // 节点属性
     };
 
     /**
      * 判断一个节点的属性值是否为空(即没有被正确设置)
      */
-    inline bool is_attribute_null(const node &n) {
+    inline bool is_attribute_null(const TreeNode::ptr &n) {
         return n->attribute.index() == 0;
     }
 
-    inline std::string get_attribute_string(const node &n) {
+    inline std::string get_attribute_string(const TreeNode::ptr &n) {
         if (is_attribute_null(n)) return "null_attribute";
         try {
             switch (n->attribute.index()) {
                 case 1:
                     return getTokenRepresentation(std::get<TokenType>(n->attribute), nullptr);
                 case 2:
-                    return std::to_string(std::get<int>(n->attribute));
+                    return std::to_string(std::get<int_t>(n->attribute));
                 case 3:
-                    return std::to_string(std::get<float>(n->attribute));
+                    return std::to_string(std::get<float_t>(n->attribute));
                 case 4:
-                    return std::to_string(std::get<double>(n->attribute));
+                    return std::to_string(std::get<double_t>(n->attribute));
                 case 5:
-                    switch (std::get<BOOL>(n->attribute)) {
+                    switch (std::get<bool_t>(n->attribute)) {
                         case BOOL::TRUE:
                             return "true";
                         case BOOL::FALSE:
@@ -114,8 +106,8 @@ namespace Compiler::Parser {
         return "";
     }
 
-    node parse();
+    TreeNode::ptr parse();
 
-    void printTree(node n, int tab_count = 0);
+    void printTree(TreeNode::ptr n, int tab_count = 0);
 }
 #endif //SCANNER_PARSER_H

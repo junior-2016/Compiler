@@ -5,9 +5,9 @@
 #include <cassert>
 
 namespace Compiler {
-    NUM_TYPE getNumType(const std::string &tokenString) {
+    NUM_TYPE getNumType(const string_t &tokenString) {
         // assert(tokenString.size() > 0);
-        if (tokenString.find('.') != std::string::npos) {
+        if (tokenString.find('.') != string_t::npos) {
             if (*tokenString.rbegin() == 'F' || *tokenString.rbegin() == 'f') return NUM_TYPE::FLOAT;
             else return NUM_TYPE::DOUBLE;
         }

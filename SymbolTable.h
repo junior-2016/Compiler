@@ -43,7 +43,7 @@ namespace Compiler {
 
         struct SymbolEntryHash {
             std::size_t operator()(const SymbolEntry &entry) const {
-                return std::hash<std::string>()(*entry.symbol_name);
+                return std::hash<string_t>()(*entry.symbol_name);
             }
         };
 

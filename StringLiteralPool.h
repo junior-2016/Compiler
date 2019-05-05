@@ -25,7 +25,7 @@ namespace Compiler {
     private:
         struct stringLiteralHash {
             std::size_t operator()(const string_ptr &ptr) const {
-                return std::hash<std::string>()(*ptr);
+                return std::hash<string_t>()(*ptr);
             }
         };
 
@@ -53,7 +53,7 @@ namespace Compiler {
 
         void operator=(StringLiteralPool const &) = delete;
 
-        string_ptr getLiteralString(const std::string &string) {
+        string_ptr getLiteralString(const string_t &string) {
             auto ptr = make_string_ptr(string);
             StringLiteralSet::iterator pos;
             if ((pos = set.find(ptr)) == set.end()) {

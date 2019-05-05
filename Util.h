@@ -22,15 +22,25 @@ namespace Compiler {
         DOUBLE
     };
 
-    NUM_TYPE getNumType(const std::string &tokenString);
+    // 为了限制bool类型取值,建立一个BOOL枚举,取代C语言的bool类型
+    enum class BOOL {
+        TRUE = true, FALSE = false
+    };
 
-    /**
-     * Compiler 常用的类型别名
-     */
-    typedef std::shared_ptr<std::string> string_ptr;
+    typedef struct empty_struct {
+    } null_t; // 空类型
+    typedef BOOL bool_t;
+    typedef int32_t int_t;
+    typedef float float_t;
+    typedef double double_t;
+    typedef char char_t;
+    typedef std::string string_t;
+    typedef std::shared_ptr<string_t> string_ptr;
 
-    inline string_ptr make_string_ptr(const std::string &str) {
-        return std::make_shared<std::string>(str);
+    inline string_ptr make_string_ptr(const string_t &str) {
+        return std::make_shared<string_t>(str);
     }
+
+    NUM_TYPE getNumType(const string_t &tokenString);
 }
 #endif //COMPILER_UTIL_H

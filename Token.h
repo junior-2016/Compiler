@@ -52,11 +52,11 @@ namespace Compiler {
         // POINT  // 小数点.(用于提取浮点数以及后面支持对象对成员的访问)
     } TokenType;
 
-    std::map<std::string, TokenType> getKeyWordTable();
+    std::map<string_t, TokenType> getKeyWordTable();
 
-    std::unordered_set<char> getLegalCharTable();
+    std::unordered_set<char_t> getLegalCharTable();
 
-    std::string getTokenRepresentation(TokenType type, const string_ptr &ptr);
+    string_t getTokenRepresentation(TokenType type, const string_ptr &ptr);
 
     void printToken(TokenType type, const string_ptr &ptr);
 }
