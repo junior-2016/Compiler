@@ -10,6 +10,8 @@
 #define SCANNER_SYMBOLTABLE_H
 
 #include "Compiler.h"
+#include "Exception.h"
+#include "TypeSystem.h"
 #include "Util.h"
 
 namespace Compiler {
@@ -37,8 +39,8 @@ namespace Compiler {
 
             string_ptr symbol_name = nullptr;                 // 符号名称
             uintptr_t memory_address = 0;                     // 内存地址
-            mutable std::list<int> symbol_appear_lines;       // 符号出现过的行号列表(可变)
-            // struct typeinfo;                               // 类型信息
+            mutable std::list<int> symbol_appear_lines;       // 符号出现过的行号列表(加上mutable表示可变)
+            Type type = Type::Void;                           // 类型信息
         };
 
         struct SymbolEntryHash {
@@ -72,15 +74,45 @@ namespace Compiler {
 
         void operator=(SymbolTable const &) = delete;
 
-        void insert(const string_ptr &name, int lineNumber, uintptr_t memory_address) {
+        /**
+         * 遍历AST时,如果遇到其他使用symbol的statement或者expr,更新它的lineNumber.
+         * 如果更新的时候发现symbol还没有插入符号表,则报符号未声明错误.
+         * 比如下面的:
+         * x := 5 (第一次出现x时并没有声明)
+         * 会报未声明错误.
+         */
+        void update(const string_ptr &name, int lineNumber) {
             SymbolEntry search(name);
             symbol_table_t::iterator pos;
-            if ((pos = table.find(search)) == table.end()) {
+            if ((pos = table.find(search)) != table.end()) {
+                (*pos).symbol_appear_lines.push_back(lineNumber);
+            } else {
+                using namespace Compiler::Exception;
+                string_t message = "Symbol " + *name + " not declaration on line " + std::to_string(lineNumber);
+                ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
+            }
+        }
+
+        /**
+         * 遍历AST 遇到declaration_statement时调用.
+         * 如果同一个symbol两次调用insert,将报重复定义错误.
+         * 比如:
+         * int a := 1;
+         * double a := 1.2;
+         * 会报重复定义错误
+         */
+        void insert(const string_ptr &name, int lineNumber, uintptr_t memory_address, Type type) {
+            SymbolEntry search(name);
+            if (table.find(search) == table.end()) {
                 search.memory_address = memory_address;
                 search.symbol_appear_lines.push_back(lineNumber);
+                search.type = type;
                 table.insert(search);
             } else {
-                (*pos).symbol_appear_lines.push_back(lineNumber);
+                using namespace Compiler::Exception;
+                string_t message = "Symbol " + *name + " declaration more than once on line "
+                                   + std::to_string(lineNumber);
+                ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
             }
         }
 

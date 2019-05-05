@@ -44,11 +44,13 @@ namespace Compiler::Analyser {
                     case StmtOrExp::StmtK:
                         switch (std::get<StmtKind>(n->kind)) {
                             case StmtKind::DeclarationK:
-
+                                SymbolTable::globalTable()
+                                        .insert(std::get<string_ptr>(n->attribute), n->lineNumber,
+                                                global_address++, n->type);
                                 break;
                             case StmtKind::AssignK:
                             case StmtKind::ReadK:
-
+                                SymbolTable::globalTable().update(std::get<string_ptr>(n->attribute), n->lineNumber);
                                 break;
                             default:
                                 break;
@@ -57,7 +59,7 @@ namespace Compiler::Analyser {
                     case StmtOrExp::ExpK:
                         switch (std::get<ExpKind>(n->kind)) {
                             case ExpKind::IdK:
-
+                                SymbolTable::globalTable().update(std::get<string_ptr>(n->attribute), n->lineNumber);
                                 break;
                             default:
                                 break;
@@ -69,7 +71,22 @@ namespace Compiler::Analyser {
     }
 
     void check_type(const TreeNode::ptr &n) {
+        post_traverse_parser_tree(n, [](TreeNode::ptr n) {
+            if (n != nullptr) {
+                switch (n->stmt_or_exp) {
+                    case StmtOrExp::StmtK:
+                        switch (std::get<StmtKind>(n->kind)) {
 
+                        }
+                        break;
+                    case StmtOrExp::ExpK:
+                        switch (std::get<ExpKind>(n->kind)) {
+
+                        }
+                        break;
+                }
+            }
+        });
     }
 
     void analyse(const TreeNode::ptr &n) {

@@ -5,12 +5,12 @@
 #include "Exception.h"
 
 namespace Compiler::Exception {
-    void ExceptionHandle::add_exception(ExceptionType type, const std::string &message) {
+    void ExceptionHandle::add_exception(ExceptionType type, const string_t &message) {
         errors.push_back(ExceptionEntry{message, type});
     }
 
-    std::map<ExceptionType, std::string> getExceptionTypeStrings() {
-        static auto map = std::map<ExceptionType, std::string>
+    std::map<ExceptionType, string_t> getExceptionTypeStrings() {
+        static auto map = std::map<ExceptionType, string_t>
                 {{ExceptionType::LEXICAL_ERROR,  "LEXICAL_ERROR"},
                  {ExceptionType::SYNTAX_ERROR,   "SYNTAX_ERROR"},
                  {ExceptionType::ANALYSIS_ERROR, "ANALYSIS_ERROR"}};
@@ -19,7 +19,7 @@ namespace Compiler::Exception {
 
     std::string printExceptionType(ExceptionType type) {
         auto map = getExceptionTypeStrings();
-        std::map<ExceptionType, std::string>::iterator pos;
+        std::map<ExceptionType, string_t>::iterator pos;
         if ((pos = map.find(type)) == map.end()) {
             return "UNKNOWN_EXCEPTION";
         } else {

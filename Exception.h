@@ -6,6 +6,7 @@
 #define SCANNER_EXCEPTION_H
 
 #include "Compiler.h"
+#include "Util.h"
 
 namespace Compiler::Exception {
     enum class ExceptionType {
@@ -28,7 +29,7 @@ namespace Compiler::Exception {
     };
 
     struct ExceptionEntry {
-        std::string message;
+        string_t message;
         ExceptionType type;
     };
 
@@ -47,7 +48,7 @@ namespace Compiler::Exception {
 
         void operator=(ExceptionHandle const &) = delete;
 
-        void add_exception(ExceptionType type, const std::string &message);
+        void add_exception(ExceptionType type, const string_t &message);
 
         friend std::ostream &operator<<(std::ostream &out, const ExceptionHandle &handle);
 
