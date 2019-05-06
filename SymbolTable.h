@@ -125,10 +125,14 @@ namespace Compiler {
         }
 
         friend std::ostream &operator<<(std::ostream &out, const SymbolTable &symbolTable) {
-            out << "Variable_Name" << std::setw(20) << "Memory_Address"
-                << std::setw(28) << "Appear_Line_Number" << "\n";
+            out << "Variable_Name" << std::setw(20)
+                << "Memory_Address" << std::setw(20)
+                << "Data_Type" << std::setw(28)
+                << "Appear_Line_Number" << "\n";
             for (auto &entry:symbolTable.table) {
-                out << boost::format("%-20s 0x%08x %-12s") % *entry.symbol_name % entry.memory_address % "";
+                out << boost::format("%-20s 0x%08x %-12s %-20s")
+                       % *entry.symbol_name % entry.memory_address % ""
+                       % TypeSystem::getTypeRepresentation(entry.type) ;
                 for (auto &line:entry.symbol_appear_lines) {
                     out << boost::format("%-8d") % line;
                 }

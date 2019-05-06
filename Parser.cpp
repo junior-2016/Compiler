@@ -141,16 +141,9 @@ namespace Compiler::Parser {
             case TokenType::STRING:
                 n = newStatementNode(StmtKind::DeclarationK);
                 if (n != nullptr) {
-                    switch (token.tokenType) {
-                        case TokenType::INT:    n->type = Type::Integer; break;
-                        case TokenType::DOUBLE: n->type = Type::Double;break;
-                        case TokenType::FLOAT:  n->type = Type::Float; break;
-                        case TokenType::BOOL:   n->type = Type::Boolean;break;
-                        case TokenType::STRING: n->type = Type::String;break;
-                        default: break;
-                    }
+                    n->type = TypeSystem::getTypeFromToken(token.tokenType);
                     match(token.tokenType); // 匹配类型token,必读命中
-                    if (token.tokenType==TokenType::ID) { // 如果语法正确,attribute会被正确设置为ID的字符串
+                    if (token.tokenType == TokenType::ID) { // 如果语法正确,attribute会被正确设置为ID的字符串
                         n->attribute = token.tokenString;
                     } // 如果发生语法错误,即下一个token不是ID,那么attribute将不会被正确设置,依旧为默认值null_t(空属性)
                     match(TokenType::ID);
@@ -576,7 +569,8 @@ namespace Compiler::Parser {
                         fprintf(OUTPUT_STREAM, "Assign to ID : %s\n", get_attribute_string(n).c_str());
                         break;
                     case StmtKind::DeclarationK:
-                        fprintf(OUTPUT_STREAM, "Declaration ID : %s\n", get_attribute_string(n).c_str());
+                        fprintf(OUTPUT_STREAM, "Declaration ID : %s, Type : %s\n", get_attribute_string(n).c_str(),
+                                TypeSystem::getTypeRepresentation(n->type).c_str());
                         break;
                     case StmtKind::ReadK:
                         fprintf(OUTPUT_STREAM, "Read : %s\n", get_attribute_string(n).c_str());
