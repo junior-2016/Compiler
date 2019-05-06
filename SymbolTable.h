@@ -116,7 +116,19 @@ namespace Compiler {
             }
         }
 
-        uintptr_t lookup(const string_ptr &name) {
+        /**
+         * 注意插入符号表的symbol都是非空类型的. 因为当前语言没有void关键字,不允许声明一个void类型的ID.
+         * 如果返回空类型就说明查找的symbol不存在.
+         */
+        Type getSymbolType(const string_ptr &name) {
+            symbol_table_t::iterator pos;
+            if ((pos = table.find(SymbolEntry(name))) != table.end()) {
+                return (*pos).type; // 必然返回非空类型
+            }
+            return Type::Void;
+        }
+
+        uintptr_t getSymbolAddress(const string_ptr &name) {
             symbol_table_t::iterator pos;
             if ((pos = table.find(SymbolEntry(name))) != table.end()) {
                 return (*pos).memory_address;
@@ -132,7 +144,7 @@ namespace Compiler {
             for (auto &entry:symbolTable.table) {
                 out << boost::format("%-20s 0x%08x %-12s %-20s")
                        % *entry.symbol_name % entry.memory_address % ""
-                       % TypeSystem::getTypeRepresentation(entry.type) ;
+                       % TypeSystem::getTypeRepresentation(entry.type);
                 for (auto &line:entry.symbol_appear_lines) {
                     out << boost::format("%-8d") % line;
                 }

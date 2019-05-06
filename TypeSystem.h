@@ -14,7 +14,7 @@ namespace Compiler {
      * 内置基本类型系统
      */
     enum class Type {
-        Void,
+        Void, // 空类型.当前语言里没有void关键字,所以不存在void类型的ID或者表达式,这里引入void类型是为了在语义检查错误时设置一个错误类型标志.
         Integer,
         Boolean,
         String,

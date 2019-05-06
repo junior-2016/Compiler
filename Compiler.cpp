@@ -33,7 +33,7 @@ namespace Compiler {
                     std::cout << "Process File " << pair.first << " has exceptions:\n" <<
                               ExceptionHandle::getHandle();
                     return;
-                } else {
+                } else { // 词法,语法,语义都正确才能执行中间代码生成
                     fprintf(stdout, "Process File %s success..\n", pair.first.c_str());
                 }
             } else { // 词法和语法错误输出
