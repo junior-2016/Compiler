@@ -138,10 +138,12 @@ namespace Compiler::Analyser {
                                 }
                                 break;
                             case StmtKind::RepeatK:
-
-                                break;
                             case StmtKind::WhileK:
-
+                                if (n->children.at(second_child)->type != Type::Boolean) {
+                                    ExceptionHandle::getHandle().add_exception(
+                                            ExceptionType::SYNTAX_ERROR,
+                                            "Type error on line " + std::to_string(n->lineNumber));
+                                }
                                 break;
                             case StmtKind::WriteK:
                                 // 暂时不限制类型,除了void
