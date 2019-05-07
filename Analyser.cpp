@@ -70,10 +70,16 @@ namespace Compiler::Analyser {
         });
     }
 
+    void report_analysis_error(const string_t &expr_name, int lineNumber) {
+        using namespace Compiler::Exception;
+        ExceptionHandle::getHandle().add_exception(ExceptionType::ANALYSIS_ERROR,
+                                                   expr_name + " check type error on line " +
+                                                   std::to_string(lineNumber));
+    }
+
     // check_type 时已经确保符号表没有错误,即符号不会重定义,也不会在无定义的时候被使用.
     void check_type(const TreeNode::ptr &n) {
         post_traverse_parser_tree(n, [](TreeNode::ptr n) {
-            using namespace Compiler::Exception;
             constexpr size_t first_child = 0;
             constexpr size_t second_child = 1;
             Type t1, t2, temp;
@@ -91,22 +97,16 @@ namespace Compiler::Analyser {
                                 t1 = n->children.at(first_child)->type;
                                 if (n->type == Type::String || n->type == Type::Boolean) {
                                     if (t1 != n->type) {
-                                        ExceptionHandle::getHandle().add_exception(
-                                                ExceptionType::SYNTAX_ERROR,
-                                                "Type error on line " + std::to_string(n->lineNumber));
+                                        report_analysis_error("declaration statement", n->lineNumber);
                                     }
                                 } else if (n->type == Type::Integer
                                            || n->type == Type::Float
                                            || n->type == Type::Double) {
                                     if (t1 != Type::Integer && t1 != Type::Float && t1 != Type::Double) {
-                                        ExceptionHandle::getHandle().add_exception(
-                                                ExceptionType::SYNTAX_ERROR,
-                                                "Type error on line " + std::to_string(n->lineNumber));
+                                        report_analysis_error("declaration statement", n->lineNumber);
                                     }
                                 } else { // 出现其他类型 => 基本不会出现这种情况,如果出现是前面模块出了bug
-                                    ExceptionHandle::getHandle().add_exception(
-                                            ExceptionType::SYNTAX_ERROR,
-                                            "System bug error on line " + std::to_string(n->lineNumber));
+                                    // pass.
                                 }
                                 break;
                             case StmtKind::AssignK:
@@ -114,43 +114,31 @@ namespace Compiler::Analyser {
                                 temp = SymbolTable::globalTable().getSymbolType(std::get<string_ptr>(n->attribute));
                                 if (temp == Type::String || temp == Type::Boolean) {
                                     if (t1 != temp) {
-                                        ExceptionHandle::getHandle().add_exception(
-                                                ExceptionType::SYNTAX_ERROR,
-                                                "Type error on line " + std::to_string(n->lineNumber));
+                                        report_analysis_error("assign statement", n->lineNumber);
                                     }
                                 } else if (temp == Type::Integer || temp == Type::Float || temp == Type::Double) {
                                     if (t1 != Type::Integer && t1 != Type::Float && t1 != Type::Double) {
-                                        ExceptionHandle::getHandle().add_exception(
-                                                ExceptionType::SYNTAX_ERROR,
-                                                "Type error on line " + std::to_string(n->lineNumber));
+                                        report_analysis_error("assign statement", n->lineNumber);
                                     }
                                 } else { // 出现其他类型 => 基本不会出现这种情况,如果出现是前面模块出了bug
-                                    ExceptionHandle::getHandle().add_exception(
-                                            ExceptionType::SYNTAX_ERROR,
-                                            "System bug error on line " + std::to_string(n->lineNumber));
+                                    // pass.
                                 }
                                 break;
                             case StmtKind::IfK:
                                 if (n->children.at(first_child)->type != Type::Boolean) {
-                                    ExceptionHandle::getHandle().add_exception(
-                                            ExceptionType::SYNTAX_ERROR,
-                                            "Type error on line " + std::to_string(n->lineNumber));
+                                    report_analysis_error("if statement", n->lineNumber);
                                 }
                                 break;
                             case StmtKind::RepeatK:
                             case StmtKind::WhileK:
                                 if (n->children.at(second_child)->type != Type::Boolean) {
-                                    ExceptionHandle::getHandle().add_exception(
-                                            ExceptionType::SYNTAX_ERROR,
-                                            "Type error on line " + std::to_string(n->lineNumber));
+                                    report_analysis_error("loop statement", n->lineNumber);
                                 }
                                 break;
                             case StmtKind::WriteK:
-                                // 暂时不限制类型,除了void
+                                // 不限制输出类型,除了void
                                 if (n->children.at(first_child)->type == Type::Void) {
-                                    ExceptionHandle::getHandle().add_exception(
-                                            ExceptionType::SYNTAX_ERROR,
-                                            "Type error on line " + std::to_string(n->lineNumber));
+                                    report_analysis_error("write statement", n->lineNumber);
                                 }
                                 break;
                             default:
@@ -180,20 +168,16 @@ namespace Compiler::Analyser {
                                 break;
                             case ExpKind::OpK :
                                 switch (std::get<TokenType>(n->attribute)) {
-                                    // 单目逻辑运算 NOT
-                                    case TokenType::NOT:
+                                    case TokenType::NOT: //单目逻辑运算 NOT
                                         if (n->children.at(first_child)->type == Type::Boolean) {
                                             n->type = Type::Boolean;
                                         } else {
                                             n->type = Type::Void; // 设置类型为空,作为类型错标志
-                                            ExceptionHandle::getHandle().add_exception(
-                                                    ExceptionType::SYNTAX_ERROR,
-                                                    "NOT expression type error on line " +
-                                                    std::to_string(n->lineNumber));
+                                            report_analysis_error("logical-not expression", n->lineNumber);
                                         }
                                         break;
-                                        // 双目数值运算 PLUS MINUS TIMES OVER MOD (输入两个NUM,输出一个NUM)
-                                        //
+
+                                        //双目数值运算 PLUS MINUS TIMES OVER MOD (输入两个NUM,输出一个NUM)
                                     case TokenType::PLUS:
                                     case TokenType::MINUS:
                                     case TokenType::TIMES:
@@ -218,11 +202,10 @@ namespace Compiler::Analyser {
                                             }
                                         } else {
                                             n->type = Type::Void;
-                                            ExceptionHandle::getHandle().add_exception(
-                                                    ExceptionType::SYNTAX_ERROR,
-                                                    "Type error on line " + std::to_string(n->lineNumber));
+                                            report_analysis_error("arithmetic expression", n->lineNumber);
                                         }
                                         break;
+
                                         // 双目逻辑运算 AND OR (输入两个bool,输出一个bool)
                                     case TokenType::AND:
                                     case TokenType::OR:
@@ -231,11 +214,10 @@ namespace Compiler::Analyser {
                                             n->type = Type::Boolean;
                                         } else {
                                             n->type = Type::Void;
-                                            ExceptionHandle::getHandle().add_exception(
-                                                    ExceptionType::SYNTAX_ERROR,
-                                                    "Type error on line " + std::to_string(n->lineNumber));
+                                            report_analysis_error("logical-and-or expression", n->lineNumber);
                                         }
                                         break;
+
                                         // 双目比较运算 LT BT LE BE EQ NE (输入两个NUM,输出一个bool)
                                     case TokenType::LT:
                                     case TokenType::LE:
@@ -250,9 +232,7 @@ namespace Compiler::Analyser {
                                             n->type = Type::Boolean;
                                         } else {
                                             n->type = Type::Void;
-                                            ExceptionHandle::getHandle().add_exception(
-                                                    ExceptionType::SYNTAX_ERROR,
-                                                    "Type error on line " + std::to_string(n->lineNumber));
+                                            report_analysis_error("comparison expression", n->lineNumber);
                                         }
                                         break;
                                     default:

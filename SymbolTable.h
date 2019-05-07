@@ -89,7 +89,7 @@ namespace Compiler {
             } else {
                 using namespace Compiler::Exception;
                 string_t message = "Symbol " + *name + " not declaration on line " + std::to_string(lineNumber);
-                ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
+                ExceptionHandle::getHandle().add_exception(ExceptionType::ANALYSIS_ERROR, message);
             }
         }
 
@@ -112,7 +112,7 @@ namespace Compiler {
                 using namespace Compiler::Exception;
                 string_t message = "Symbol " + *name + " declaration more than once on line "
                                    + std::to_string(lineNumber);
-                ExceptionHandle::getHandle().add_exception(ExceptionType::SYNTAX_ERROR, message);
+                ExceptionHandle::getHandle().add_exception(ExceptionType::ANALYSIS_ERROR, message);
             }
         }
 
