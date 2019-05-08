@@ -22,6 +22,7 @@ if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     add_executable(Compiler main.cpp Scanner.h Token.h config.h SymbolTable.h Exception.h
         StringLiteralPool.h Compiler.h Scanner.cpp FileUtil.h Exception.cpp FileUtil.cpp
-        Compiler.cpp Token.cpp Parser.h Parser.cpp Util.h Util.cpp Analyser.h Analyser.cpp CodeGen.h CodeGen.cpp TypeSystem.h)
+        Compiler.cpp Token.cpp Parser.h Parser.cpp Util.h Util.cpp Analyser.h Analyser.cpp
+            CodeGen.h CodeGen.cpp TypeSystem.h Code.h)
     target_link_libraries(Compiler ${Boost_LIBRARIES})
 endif()

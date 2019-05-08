@@ -40,13 +40,19 @@ namespace Compiler::Analyser {
     void build_symbol_table(const TreeNode::ptr &n) {
         pre_traverse_parser_tree(n, [](TreeNode::ptr n) {
             if (n != nullptr) {
+                Type type;
+                TreeNode::ptr p;
                 switch (n->stmt_or_exp) {
                     case StmtOrExp::StmtK:
                         switch (std::get<StmtKind>(n->kind)) {
                             case StmtKind::DeclarationK:
-                                SymbolTable::globalTable()
-                                        .insert(std::get<string_ptr>(n->attribute), n->lineNumber,
-                                                global_address++, n->type);
+                                type = TypeSystem::getTypeFromToken(std::get<TokenType>(n->attribute));
+                                p = n->children.at(0); // declaration_statement的第一个children是variable_list.
+                                while (p != nullptr) {
+                                    SymbolTable::globalTable().insert(
+                                            std::get<string_ptr>(p->attribute), p->lineNumber, global_address++, type);
+                                    p = p->sibling;
+                                }
                                 break;
                             case StmtKind::AssignK:
                             case StmtKind::ReadK:
@@ -83,30 +89,36 @@ namespace Compiler::Analyser {
             constexpr size_t first_child = 0;
             constexpr size_t second_child = 1;
             Type t1, t2, temp;
+            TreeNode::ptr ptr;
             if (n != nullptr) {
                 switch (n->stmt_or_exp) {
                     case StmtOrExp::StmtK:
                         switch (std::get<StmtKind>(n->kind)) {
                             case StmtKind::DeclarationK:
-                                // 检查　Type ID := expr 中 Type 是否与expr匹配:
-                                // 1. string ID := expr 则 type(expr)==Type::String
-                                // 2. int ID := / double ID := / float ID:= expr,
-                                // type(expr)==Type::Integer|Float|Double 都可以
+                                // Declaration => Type variable_list;
+                                // variable_list => ID[:=expr]{,ID[:=expr]}*
+                                // 检查　variable_list 中 所有 ID:=expr 的 expr 是否与 Type 匹配.
+                                // 1. Type为String的, 则 type(expr)==Type::String
+                                // 2. Type为 Integer|Float|Double 的, 则 type(expr)==Type::Integer|Float|Double 都可以
                                 // 注意这里即使expr类型是double,ID的type是int也没有关系,可以 int ID = int_cast(double_expr);
-                                // 3. bool ID := expr 则 type(expr)==Type::Boolean.
-                                t1 = n->children.at(first_child)->type;
-                                if (n->type == Type::String || n->type == Type::Boolean) {
-                                    if (t1 != n->type) {
-                                        report_analysis_error("declaration statement", n->lineNumber);
+                                // 3. Type为Boolean 则 type(expr)==Type::Boolean.
+                                temp = TypeSystem::getTypeFromToken(std::get<TokenType>(n->attribute));
+                                ptr = n->children.at(first_child); // variable_list_node
+                                while (ptr != nullptr) {
+                                    if (!ptr->children.empty() && ptr->children.at(first_child) != nullptr) {
+                                        t1 = ptr->children.at(first_child)->type; // expr存在并获取其类型
+                                        if (temp == Type::String || temp == Type::Boolean) {
+                                            if (t1 != temp) {
+                                                report_analysis_error("variable_list statement", ptr->lineNumber);
+                                            }
+                                        } else if (temp == Type::Integer || temp == Type::Float ||
+                                                   temp == Type::Double) {
+                                            if (t1 != Type::Integer && t1 != Type::Float && t1 != Type::Double) {
+                                                report_analysis_error("variable_list statement", ptr->lineNumber);
+                                            }
+                                        }
                                     }
-                                } else if (n->type == Type::Integer
-                                           || n->type == Type::Float
-                                           || n->type == Type::Double) {
-                                    if (t1 != Type::Integer && t1 != Type::Float && t1 != Type::Double) {
-                                        report_analysis_error("declaration statement", n->lineNumber);
-                                    }
-                                } else { // 出现其他类型 => 基本不会出现这种情况,如果出现是前面模块出了bug
-                                    // pass.
+                                    ptr = ptr->sibling;
                                 }
                                 break;
                             case StmtKind::AssignK:
@@ -120,8 +132,6 @@ namespace Compiler::Analyser {
                                     if (t1 != Type::Integer && t1 != Type::Float && t1 != Type::Double) {
                                         report_analysis_error("assign statement", n->lineNumber);
                                     }
-                                } else { // 出现其他类型 => 基本不会出现这种情况,如果出现是前面模块出了bug
-                                    // pass.
                                 }
                                 break;
                             case StmtKind::IfK:

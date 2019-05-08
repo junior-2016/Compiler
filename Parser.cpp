@@ -25,6 +25,8 @@ namespace Compiler::Parser {
 
     TreeNode::ptr assign_statement();
 
+    TreeNode::ptr variable_list_statement();
+
     TreeNode::ptr declaration_statement();
 
     TreeNode::ptr do_while_statement();
@@ -128,8 +130,35 @@ namespace Compiler::Parser {
     }
 
     /**
-     * declaration_statement => Type ID := expression
-     * 对变量声明并且完成赋值,不允许无初始化定义(赋值)的声明.
+     * variable_list_statement => ID [:= expression](可选) { , ID [:= expression]}*
+     */
+    TreeNode::ptr variable_list_statement() {
+        TreeNode::ptr n = nullptr;
+        switch (token.tokenType) {
+            case TokenType::ID:
+                n = newStatementNode(StmtKind::VariableListK);
+                if (n != nullptr) {
+                    n->attribute = token.tokenString;
+                    match(TokenType::ID);
+                    if (token.tokenType == TokenType::ASSIGN) { // 可选分支
+                        match(TokenType::ASSIGN);
+                        n->children.push_back(expression());
+                    }
+                    if (token.tokenType == TokenType::COMMA) {
+                        match(TokenType::COMMA);
+                        n->sibling = variable_list_statement();
+                    }
+                }
+                break;
+            default:
+                report_syntax_error("variable_list_statement()", getTokenRepresentation(TokenType::ID, nullptr));
+        }
+        return n;
+    }
+
+    /**
+     * declaration_statement => Type variable_list_statement
+     * 对变量进行声明
      */
     TreeNode::ptr declaration_statement() {
         TreeNode::ptr n = nullptr;
@@ -141,14 +170,9 @@ namespace Compiler::Parser {
             case TokenType::STRING:
                 n = newStatementNode(StmtKind::DeclarationK);
                 if (n != nullptr) {
-                    n->type = TypeSystem::getTypeFromToken(token.tokenType);
-                    match(token.tokenType); // 匹配类型token,必读命中
-                    if (token.tokenType == TokenType::ID) { // 如果语法正确,attribute会被正确设置为ID的字符串
-                        n->attribute = token.tokenString;
-                    } // 如果发生语法错误,即下一个token不是ID,那么attribute将不会被正确设置,依旧为默认值null_t(空属性)
-                    match(TokenType::ID);
-                    match(TokenType::ASSIGN);
-                    n->children.push_back(expression());
+                    n->attribute = token.tokenType;
+                    match(token.tokenType);
+                    n->children.push_back(variable_list_statement());
                 }
                 break;
             default:
@@ -569,8 +593,10 @@ namespace Compiler::Parser {
                         fprintf(OUTPUT_STREAM, "Assign to ID : %s\n", get_attribute_string(n).c_str());
                         break;
                     case StmtKind::DeclarationK:
-                        fprintf(OUTPUT_STREAM, "Declaration ID : %s, Type : %s\n", get_attribute_string(n).c_str(),
-                                TypeSystem::getTypeRepresentation(n->type).c_str());
+                        fprintf(OUTPUT_STREAM, "Declaration Type : %s\n", get_attribute_string(n).c_str());
+                        break;
+                    case StmtKind::VariableListK:
+                        fprintf(OUTPUT_STREAM, "ID : %s\n", get_attribute_string(n).c_str());
                         break;
                     case StmtKind::ReadK:
                         fprintf(OUTPUT_STREAM, "Read : %s\n", get_attribute_string(n).c_str());

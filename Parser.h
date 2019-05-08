@@ -28,7 +28,7 @@ namespace Compiler::Parser {
 
     /* statement type 分类 */
     enum class StmtKind {
-        IfK, RepeatK, AssignK, ReadK, WriteK, WhileK, DeclarationK
+        IfK, RepeatK, AssignK, ReadK, WriteK, WhileK, DeclarationK, VariableListK
     };
 
     /* expression type 分类 */
