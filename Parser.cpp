@@ -115,7 +115,6 @@ namespace Compiler::Parser {
                     match(TokenType::THEN);
                     n->children.push_back(statement_sequence());
                     if (token.tokenType == TokenType::ELSE) {
-                        // 这里必须写成 if(token_type is ELSE){ match (ELSE); ...},代表一种可选的推导分支
                         match(TokenType::ELSE);
                         n->children.push_back(statement_sequence());
                     }
@@ -316,53 +315,38 @@ namespace Compiler::Parser {
         return n;
     }
 
-    /**
-     * expression => logical_or_expression
-     */
-    TreeNode::ptr expression() {
-        return logical_or_expression();
-    }
 
-    /**
-     * logical_or_expression => logical_and_expression { or logical_and_expression }*
+    // expression => logical_or_expression
+    TreeNode::ptr expression() { return logical_or_expression(); }
 
-     */
+    // logical_or_expression => logical_and_expression { or logical_and_expression }*
     TreeNode::ptr logical_or_expression() {
         return expression_template(logical_and_expression, {TokenType::OR});
     }
 
-    /**
-     * logical_and_expression => equality_expression { and equality_expression }*
-     */
+    //logical_and_expression => equality_expression { and equality_expression }*
     TreeNode::ptr logical_and_expression() {
         return expression_template(equality_expression, {TokenType::AND});
     }
 
-    /**
-     * equality_expression => relational_expression { = | !=  relational_expression}*
-     */
+    // equality_expression => relational_expression { = | !=  relational_expression}*
     TreeNode::ptr equality_expression() {
         return expression_template(relational_expression, {TokenType::EQ, TokenType::NE});
     }
 
-    /**
-     * relational_expression => additive_expression { > | < | >= | <=  additive_expression } *
-     */
+    // relational_expression => additive_expression { > | < | >= | <=  additive_expression } *
     TreeNode::ptr relational_expression() {
         return expression_template(arithmetic_additive_expression,
                                    {TokenType::LT, TokenType::LE, TokenType::BT, TokenType::BE});
     }
 
-    /**
-     * additive_expression => multiplicative_expression { +|- multiplicative_expression }*
-     */
+    // additive_expression => multiplicative_expression { +|- multiplicative_expression }*
     TreeNode::ptr arithmetic_additive_expression() {
-        return expression_template(arithmetic_multiplicative_expression, {TokenType::PLUS, TokenType::MINUS});
+        return expression_template
+                (arithmetic_multiplicative_expression, {TokenType::PLUS, TokenType::MINUS});
     }
 
-    /**
-     *  multiplicative_expression => factor_expression { * | / | % factor_expression }*
-     */
+    //multiplicative_expression => factor_expression { * | / | % factor_expression }*
     TreeNode::ptr arithmetic_multiplicative_expression() {
         return expression_template(factor_expression, {TokenType::TIMES, TokenType::OVER, TokenType::MOD});
     }
@@ -443,11 +427,7 @@ namespace Compiler::Parser {
     }
 
     /**
-     * version_1:
      * statement => if_else_stat | repeat_until_stat | do_while_stat | assign_stat | read_stat | write_stat | declaration_stat
-     *
-     * version_2:(if_else_stat不加分号)
-     * statement => if_else_stat | repeat_until_stat; | do_while_stat; | assign_stat; | read_stat; | write_stat; | declaration_stat;
      */
     TreeNode::ptr statement() {
         using namespace Compiler::Exception;
@@ -458,23 +438,18 @@ namespace Compiler::Parser {
                 break;
             case TokenType::REPEAT:
                 n = repeat_until_statement();
-                match(TokenType::SEMI);
                 break;
             case TokenType::DO:
                 n = do_while_statement();
-                match(TokenType::SEMI);
                 break;
             case TokenType::ID:
                 n = assign_statement();
-                match(TokenType::SEMI);
                 break;
             case TokenType::READ:
                 n = read_statement();
-                match(TokenType::SEMI);
                 break;
             case TokenType::WRITE:
                 n = write_statement();
-                match(TokenType::SEMI);
                 break;
             case TokenType::INT:
             case TokenType::FLOAT:
@@ -482,7 +457,6 @@ namespace Compiler::Parser {
             case TokenType::BOOL:
             case TokenType::STRING:
                 n = declaration_statement();
-                match(TokenType::SEMI);
                 break;
             default:
                 report_syntax_error("statement()", "......");
@@ -499,25 +473,11 @@ namespace Compiler::Parser {
     }
 
     /**
-     * version_1:
      * statement_sequence -> statement { ; statement }*
      * 解析时
      *                statement_sequence
      *                       |
      *        stat ; stat ; stat; stat; ... ; stat (statement_sequence最后一个stat不需要分号)
-     *
-     * version_2 (为了让文法更接近C语言文法,第二个版本设计为: 除了if_else_statement,每一个statement后面都必须加一个分号.
-     * 实现这一点需要将分号的match放在statement()函数里处理):
-     * statement_sequence => { statement }+
-     * statement => if_else_statement | other_statement ;
-     *
-     * 注意statement_sequence会被用在
-     * program => statement_sequence [END_FILE]
-     * if_else_statement => if expr then statement_sequence [else] statement_sequence [end]
-     * do_while_statement => do statement_sequence [while] expr
-     * repeat_until_statement => repeat statement_sequence [until] expr
-     * 上面所有 statement_sequence 结束后紧接着出现的token有: END_FILE , else , end , while , until 几种类型,
-     * 因此 statement_sequence()函数 在实现时要以这几种token作为退出循环的条件.
      */
     TreeNode::ptr statement_sequence() {
         auto n = statement();
@@ -527,7 +487,7 @@ namespace Compiler::Parser {
                token.tokenType != TokenType::END &&
                token.tokenType != TokenType::UNTIL &&
                token.tokenType != TokenType::WHILE) {
-            // match(TokenType::SEMI); // version_1
+            match(TokenType::SEMI);
             auto q = statement();
             if (q != nullptr) {
                 if (n == nullptr) {

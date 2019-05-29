@@ -12,6 +12,12 @@ namespace Compiler::CodeGen {
 
     }
 
+    /**
+     * 对于 declaration 语句 Type variable_list, 其中 variable_list => ID [:=expr]{,ID [:=expr]}*
+     * 如果存在 ID := expr,则按照expr给ID分配初始值;
+     * 如果只有一个 ID,则按照Declaration声明的Type给ID赋默认初始值:
+     * 对于 Integer/Float/Double => 默认值为0; 对于 String => 默认值为 ""; 对于 Boolean => 默认值为false.
+     */
     void cGenStmt(const TreeNode::ptr &node) {
 
     }
